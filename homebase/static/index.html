@@ -163,12 +163,91 @@ h1 span { color: var(--accent); }
 .empty-msg { color: var(--muted); font-size: 0.85rem; padding: 8px 0; }
 .connected-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; }
 @media (max-width: 600px) { body { padding: 12px; } }
+
+/* --- Navigation --- */
+.nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.nav-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.page { display: none; }
+.page.active { display: block; }
+
+/* --- Services grid --- */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  max-width: 1400px;
+}
+.service-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: border-color 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.service-card:hover { border-color: var(--accent); }
+.service-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.service-info { flex: 1; }
+.service-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+.service-desc { color: var(--muted); font-size: 0.8rem; margin-bottom: 8px; }
+.service-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.service-status.up { background: rgba(74,222,128,0.15); color: var(--green); }
+.service-status.down { background: rgba(248,113,113,0.15); color: var(--red); }
+.service-status .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 </style>
 </head>
 <body>
 
 <h1><span>&#9670;</span> Homebase</h1>
 
+<div class="nav">
+  <button class="nav-tab active" onclick="switchPage('dashboard')">Dashboard</button>
+  <button class="nav-tab" onclick="switchPage('services')">Services</button>
+</div>
+
+<!-- Dashboard page -->
+<div class="page active" id="page-dashboard">
 <div class="grid">
 
   <!-- CPU -->
@@ -256,6 +335,12 @@ h1 span { color: var(--accent); }
     <ul class="note-list" id="note-list"></ul>
   </div>
 
+</div>
+</div>
+
+<!-- Services page -->
+<div class="page" id="page-services">
+  <div class="services-grid" id="services-grid"></div>
 </div>
 
 <script>
@@ -408,6 +493,43 @@ function escapeHtml(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+// --- Page switching ---
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'services') loadServices();
+}
+
+// --- Services ---
+let servicesInterval;
+async function loadServices() {
+  try {
+    const r = await fetch('/api/services');
+    const services = await r.json();
+    const grid = document.getElementById('services-grid');
+    const hostname = window.location.hostname;
+    grid.innerHTML = services.map(s => {
+      // Rewrite any remaining localhost URLs to the actual hostname
+      let url = s.url.replace('localhost', hostname);
+      return `
+      <a class="service-card" href="${url}" target="_blank">
+        <div class="service-icon">${s.icon}</div>
+        <div class="service-info">
+          <div class="service-name">${s.name}</div>
+          <div class="service-desc">${s.desc}</div>
+          <span class="service-status ${s.up ? 'up' : 'down'}">
+            <span class="dot"></span> ${s.up ? 'Online' : 'Offline'}
+          </span>
+        </div>
+      </a>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+  if (servicesInterval) clearInterval(servicesInterval);
+  servicesInterval = setInterval(loadServices, 30000);
 }
 </script>
 </body>

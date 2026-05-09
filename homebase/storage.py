@@ -4,10 +4,13 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+
+TodoStatus = Literal["todo", "in_progress", "done"]
+VALID_STATUSES: tuple[TodoStatus, ...] = ("todo", "in_progress", "done")
 
 
 def _ensure_data_dir():
@@ -38,22 +41,31 @@ def _write_json(filename: str, data: dict):
 
 # --- Todos ---
 
+def _migrate_todo(item: dict) -> dict:
+    """Migrate old 'completed' bool to new 'status' enum."""
+    if "status" not in item:
+        item["status"] = "done" if item.pop("completed", False) else "todo"
+    if item["status"] not in VALID_STATUSES:
+        item["status"] = "todo"
+    return item
+
+
 def get_todos() -> list:
     """Return all todos, sorted by creation time (oldest first)."""
     data = _read_json("todos.json")
-    items = list(data.values())
+    items = [_migrate_todo(v) for v in data.values()]
     items.sort(key=lambda t: t.get("created_at", 0))
     return items
 
 
-def add_todo(text: str) -> dict:
+def add_todo(text: str, status: TodoStatus = "todo") -> dict:
     """Add a new todo item. Returns the created item."""
     data = _read_json("todos.json")
     todo_id = str(int(time.time() * 1_000_000))
     item = {
         "id": todo_id,
         "text": text.strip(),
-        "completed": False,
+        "status": status if status in VALID_STATUSES else "todo",
         "created_at": time.time(),
     }
     data[todo_id] = item
@@ -61,12 +73,15 @@ def add_todo(text: str) -> dict:
     return item
 
 
-def toggle_todo(todo_id: str) -> Optional[dict]:
-    """Toggle a todo's completed status. Returns the updated item or None."""
+def set_todo_status(todo_id: str, status: TodoStatus) -> Optional[dict]:
+    """Set a todo's status. Returns the updated item or None."""
+    if status not in VALID_STATUSES:
+        return None
     data = _read_json("todos.json")
     if todo_id not in data:
         return None
-    data[todo_id]["completed"] = not data[todo_id]["completed"]
+    data[todo_id] = _migrate_todo(data[todo_id])
+    data[todo_id]["status"] = status
     _write_json("todos.json", data)
     return data[todo_id]
 

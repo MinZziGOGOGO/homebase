@@ -5,7 +5,7 @@ import json
 import httpx
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -29,12 +29,17 @@ async def root():
 
 class TodoCreate(BaseModel):
     text: str
+    status: str = "todo"
+
+
+class TodoStatusUpdate(BaseModel):
+    status: str
 
 
 class TodoResponse(BaseModel):
     id: str
     text: str
-    completed: bool
+    status: str
     created_at: float
 
 
@@ -61,13 +66,19 @@ async def list_todos():
 @app.post("/api/todos", response_model=TodoResponse, status_code=201)
 async def create_todo(body: TodoCreate):
     """Add a new todo."""
-    return storage.add_todo(body.text)
+    valid = body.status if body.status in storage.VALID_STATUSES else "todo"
+    return storage.add_todo(body.text, valid)
 
 
-@app.put("/api/todos/{todo_id}", response_model=TodoResponse)
-async def toggle_todo(todo_id: str):
-    """Toggle completion status of a todo."""
-    result = storage.toggle_todo(todo_id)
+@app.patch("/api/todos/{todo_id}", response_model=TodoResponse)
+async def update_todo_status(todo_id: str, body: TodoStatusUpdate):
+    """Update a todo's status (todo / in_progress / done)."""
+    if body.status not in storage.VALID_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid status. Must be one of: {', '.join(storage.VALID_STATUSES)}",
+        )
+    result = storage.set_todo_status(todo_id, body.status)
     if result is None:
         raise HTTPException(status_code=404, detail="Todo not found")
     return result
@@ -133,3 +144,38 @@ async def websocket_stats(ws: WebSocket):
             await asyncio.sleep(5)
     except WebSocketDisconnect:
         pass
+
+
+# --- Services status ---
+
+SERVICES = [
+    {"name": "Nextcloud", "url": "http://localhost:8888", "icon": "☁️", "desc": "Self-hosted cloud storage"},
+    {"name": "Kavita", "url": "http://localhost:5000", "icon": "📚", "desc": "Manga & book reader"},
+    {"name": "code-server", "url": "http://localhost:8443", "icon": "💻", "desc": "VS Code in browser"},
+    {"name": "Pi-hole", "url": "http://localhost:8085/admin", "icon": "🛡️", "desc": "Network ad blocker"},
+    {"name": "mindbase", "url": "http://localhost:8091", "icon": "🧠", "desc": "AI knowledge base"},
+    {"name": "homebase", "url": "http://localhost:8080", "icon": "🏠", "desc": "System dashboard"},
+    {"name": "arcadebase", "url": "http://localhost:8090", "icon": "🕹️", "desc": "Retro arcade games"},
+    {"name": "learning-tracker", "url": "http://localhost:8091", "icon": "📖", "desc": "Learning progress tracker"},
+    {"name": "hermes-dashboard", "url": "http://localhost:9119", "icon": "⚡", "desc": "AI agent dashboard"},
+]
+
+
+@app.get("/api/services")
+async def get_services(request: Request):
+    """Ping each service and return status. URLs use request hostname."""
+    hostname = request.headers.get("host", "localhost").split(":")[0]
+    results = []
+    for svc in SERVICES:
+        up = False
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                # Always ping localhost — services run on the same host
+                resp = await client.get(svc["url"], follow_redirects=True)
+                up = resp.status_code < 500
+        except Exception:
+            up = False
+        # Rewrite URL to use the requesting hostname
+        external_url = svc["url"].replace("localhost", hostname)
+        results.append({**svc, "url": external_url, "up": up})
+    return results
