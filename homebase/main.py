@@ -149,32 +149,36 @@ async def websocket_stats(ws: WebSocket):
 # --- Services status ---
 
 SERVICES = [
-    {"name": "Nextcloud", "ping_url": "http://localhost:8888", "url": "http://nextcloud.home:8888", "icon": "☁️", "desc": "Self-hosted cloud storage"},
-    {"name": "Kavita", "ping_url": "http://localhost:5000", "url": "http://kavita.home:5000", "icon": "📚", "desc": "Manga & book reader"},
-    {"name": "code-server", "ping_url": "http://localhost:8443", "url": "http://codeserver.home:8443", "icon": "💻", "desc": "VS Code in browser"},
-    {"name": "Pi-hole", "ping_url": "http://localhost:8085/admin", "url": "http://pihole.home:8085/admin", "icon": "🛡️", "desc": "Network ad blocker"},
-    {"name": "Stirling-PDF", "ping_url": "http://localhost:8093", "url": "http://stirling.home:8093", "icon": "📄", "desc": "PDF editor & converter"},
-    {"name": "Portainer", "ping_url": "http://localhost:9000", "url": "http://portainer.home:9000", "icon": "🐳", "desc": "Docker container manager"},
-    {"name": "Vaultwarden", "ping_url": "http://localhost:8094", "url": "http://vaultwarden.home:8094", "icon": "🔐", "desc": "Password manager"},
-    {"name": "mindbase", "ping_url": "http://localhost:8091", "url": "http://mindbase.home:8091", "icon": "🧠", "desc": "AI knowledge base"},
-    {"name": "homebase", "ping_url": "http://localhost:8080", "url": "http://homebase.home:8080", "icon": "🏠", "desc": "System dashboard"},
-    {"name": "arcadebase", "ping_url": "http://localhost:8090", "url": "http://arcadebase.home:8090", "icon": "🕹️", "desc": "Retro arcade games"},
-    {"name": "learning-tracker", "ping_url": "http://localhost:8091", "url": "http://mindbase.home:8091", "icon": "📖", "desc": "Learning progress tracker"},
-    {"name": "hermes-dashboard", "ping_url": "http://localhost:9119", "url": "http://hermes.home:9119", "icon": "⚡", "desc": "AI agent dashboard"},
+    {"name": "Nextcloud", "url": "http://localhost:8888", "icon": "☁️", "desc": "Self-hosted cloud storage"},
+    {"name": "Kavita", "url": "http://localhost:5000", "icon": "📚", "desc": "Manga & book reader"},
+    {"name": "code-server", "url": "http://localhost:8443", "icon": "💻", "desc": "VS Code in browser"},
+    {"name": "Pi-hole", "url": "http://localhost:8085/admin", "icon": "🛡️", "desc": "Network ad blocker"},
+    {"name": "Stirling-PDF", "url": "http://localhost:8093", "icon": "📄", "desc": "PDF editor & converter"},
+    {"name": "Portainer", "url": "http://localhost:9000", "icon": "🐳", "desc": "Docker container manager"},
+    {"name": "Vaultwarden", "url": "http://localhost:8094", "icon": "🔐", "desc": "Password manager"},
+    {"name": "mindbase", "url": "http://localhost:8091", "icon": "🧠", "desc": "AI knowledge base"},
+    {"name": "homebase", "url": "http://localhost:8080", "icon": "🏠", "desc": "System dashboard"},
+    {"name": "arcadebase", "url": "http://localhost:8090", "icon": "🕹️", "desc": "Retro arcade games"},
+    {"name": "learning-tracker", "url": "http://localhost:8091", "icon": "📖", "desc": "Learning progress tracker"},
+    {"name": "hermes-dashboard", "url": "http://localhost:9119", "icon": "⚡", "desc": "AI agent dashboard"},
 ]
+
 
 @app.get("/api/services")
 async def get_services(request: Request):
-    """Ping each service and return status. URLs use .home domains."""
+    """Ping each service and return status. URLs use request hostname."""
     hostname = request.headers.get("host", "localhost").split(":")[0]
     results = []
     for svc in SERVICES:
         up = False
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
-                resp = await client.get(svc["ping_url"], follow_redirects=True)
+                # Always ping localhost — services run on the same host
+                resp = await client.get(svc["url"], follow_redirects=True)
                 up = resp.status_code < 500
         except Exception:
             up = False
-        results.append({"name": svc["name"], "url": svc["url"], "icon": svc["icon"], "desc": svc["desc"], "up": up})
+        # Rewrite URL to use the requesting hostname
+        external_url = svc["url"].replace("localhost", hostname)
+        results.append({**svc, "url": external_url, "up": up})
     return results
