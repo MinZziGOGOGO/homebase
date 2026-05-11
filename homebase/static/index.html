@@ -6,50 +6,90 @@
 <title>Homebase Dashboard</title>
 <style>
 :root {
-  --bg: #0f1117;
-  --card-bg: #1a1d27;
-  --border: #2a2d3a;
-  --text: #e1e4ed;
-  --muted: #8b8fa3;
-  --accent: #6c8cff;
+  --bg-primary: #0a0d14;
+  --bg-secondary: #121620;
+  --card-bg: #1a1f2e;
+  --card-hover: #1f2437;
+  --bg: var(--bg-primary);
+  --border: #2a3045;
+  --border-hover: #3d4560;
+  --text: #e8ecf4;
+  --muted: #8b93a8;
+  --accent: #7b93ff;
+  --accent-glow: rgba(123, 147, 255, 0.15);
   --green: #4ade80;
   --red: #f87171;
-  --yellow: #facc15;
-  --radius: 10px;
+  --yellow: #fbbf24;
+  --radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(123, 147, 255, 0.06), transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(74, 222, 128, 0.04), transparent 60%),
+    var(--bg-primary);
   color: var(--text);
   font-family: var(--font);
   padding: 24px;
   min-height: 100vh;
 }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(123, 147, 255, 0.04), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(251, 191, 36, 0.03), transparent 50%);
+  animation: bgDrift 15s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes bgDrift {
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+@media (prefers-reduced-motion) { body::before { animation: none; } }
 h1 {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 800;
   margin-bottom: 24px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  position: relative;
+  z-index: 1;
 }
 h1 span { color: var(--accent); }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  max-width: 1400px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1440px;
+  position: relative;
+  z-index: 1;
 }
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   padding: 20px;
   min-height: 120px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion) { .card { transition: none; } .card:hover { transform: none; } }
 .card h2 {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--muted);
   margin-bottom: 12px;
 }
@@ -100,9 +140,10 @@ h1 span { color: var(--accent); }
   font-size: 0.85rem;
   cursor: pointer;
   font-weight: 600;
-  transition: opacity 0.15s;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
-.btn:hover { opacity: 0.85; }
+.btn:hover { transform: scale(1.02); box-shadow: 0 0 12px var(--accent-glow); }
+.btn:active { transform: scale(0.98); }
 .btn-sm {
   padding: 4px 10px;
   font-size: 0.75rem;
@@ -171,6 +212,8 @@ h1 span { color: var(--accent); }
   margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0;
+  position: relative;
+  z-index: 1;
 }
 .nav-tab {
   padding: 10px 20px;
@@ -187,29 +230,65 @@ h1 span { color: var(--accent); }
 .nav-tab:hover { color: var(--text); }
 .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .page { display: none; }
-.page.active { display: block; }
+.page.active { display: block; animation: pageIn 0.3s ease; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion) { .page.active { animation: none; } }
 
-/* --- Services grid --- */
+/* --- Animated progress rings --- */
+.progress-ring { display: inline-block; vertical-align: middle; }
+.progress-ring-circle { fill: none; stroke-width: 3; transform: rotate(-90deg); transform-origin: center; }
+.progress-ring-bg { stroke: var(--border); }
+.progress-ring-fill { stroke: var(--accent); transition: stroke-dashoffset 0.8s ease, stroke 0.3s; }
+.progress-ring-fill.safe { stroke: var(--green); }
+.progress-ring-fill.warn { stroke: var(--yellow); }
+.progress-ring-fill.danger { stroke: var(--red); }
+.stat-value.counting { font-variant-numeric: tabular-nums; }
+
+/* --- Services grid enhancements --- */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
   max-width: 1400px;
+  position: relative;
+  z-index: 1;
 }
 .service-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
   padding: 20px;
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  transition: border-color 0.2s;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
+  position: relative;
 }
-.service-card:hover { border-color: var(--accent); }
+.service-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.service-card::after {
+  content: attr(href);
+  position: absolute;
+  bottom: 8px;
+  right: 16px;
+  font-size: 0.7rem;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.service-card:hover::after { opacity: 0.8; }
 .service-icon {
   font-size: 2rem;
   line-height: 1;
@@ -233,6 +312,11 @@ h1 span { color: var(--accent); }
   width: 7px; height: 7px;
   border-radius: 50%;
   background: currentColor;
+}
+.service-status.up .dot { animation: pulseDot 2s ease-in-out infinite; }
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 </style>
