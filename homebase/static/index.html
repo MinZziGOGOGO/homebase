@@ -351,6 +351,8 @@ h1 span { color: var(--accent); }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+.service-card.no-link { cursor: default; }
+.service-card.no-link::after { display: none; }
 
 </style>
 </head>
@@ -457,6 +459,31 @@ h1 span { color: var(--accent); }
 
 <!-- Services page -->
 <div class="page" id="page-services">
+  <div class="service-card no-link" id="mc-card">
+    <div class="service-icon">🎮</div>
+    <div class="service-info">
+      <div class="service-name">Minecraft</div>
+      <div class="service-desc" id="mc-desc">Loading...</div>
+      <span class="service-status down" id="mc-status">
+        <span class="dot"></span>Offline
+      </span>
+      <span style="margin-left:8px;font-size:var(--text-xs);color:var(--muted)" id="mc-players"></span>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm" id="mc-copy-btn" onclick="copyMcIp()">Copy IP</button>
+        <a href="#" id="mc-crafty-link" style="font-size:var(--text-xs);color:var(--accent);">Crafty →</a>
+      </div>
+    </div>
+  </div>
+  <a class="service-card" href="http://100.114.5.66:8100" target="_blank">
+    <div class="service-icon">🛠️</div>
+    <div class="service-info">
+      <div class="service-name">Crafty Controller</div>
+      <div class="service-desc">Minecraft server management</div>
+      <span class="service-status up">
+        <span class="dot"></span>Online
+      </span>
+    </div>
+  </a>
   <div class="services-grid" id="services-grid"></div>
 </div>
 
@@ -629,7 +656,9 @@ async function loadServices() {
     const services = await r.json();
     const grid = document.getElementById('services-grid');
     const hostname = window.location.hostname;
-    grid.innerHTML = services.map(s => {
+    // Filter out minecraft and crafty — they have dedicated cards above
+    const filtered = services.filter(s => s.name !== 'minecraft' && s.name !== 'crafty');
+    grid.innerHTML = filtered.map(s => {
       // Rewrite any remaining localhost URLs to the actual hostname
       let url = s.url.replace('localhost', hostname);
       return `
@@ -648,6 +677,45 @@ async function loadServices() {
   if (servicesInterval) clearInterval(servicesInterval);
   servicesInterval = setInterval(loadServices, 30000);
 }
+
+// --- Minecraft card ---
+const MC_SERVER = 'homebase.local:25565';
+async function loadMcStatus() {
+  try {
+    const r = await fetch('/api/minecraft');
+    const d = await r.json();
+    const statusEl = document.getElementById('mc-status');
+    const descEl = document.getElementById('mc-desc');
+    const playersEl = document.getElementById('mc-players');
+    const craftyLink = document.getElementById('mc-crafty-link');
+    const hostname = window.location.hostname;
+    craftyLink.href = `http://${hostname}:8444`;
+    if (d.online) {
+      statusEl.className = 'service-status up';
+      statusEl.innerHTML = '<span class="dot"></span>Online';
+      descEl.textContent = d.description || 'Paper Minecraft server';
+      playersEl.textContent = `${d.player_count}/${d.max_players} online`;
+    } else {
+      statusEl.className = 'service-status down';
+      statusEl.innerHTML = '<span class="dot"></span>Offline';
+      descEl.textContent = 'Server unreachable';
+      playersEl.textContent = '';
+    }
+  } catch(e) {
+    console.error('mc status:', e);
+  }
+}
+function copyMcIp() {
+  navigator.clipboard.writeText(MC_SERVER).then(() => {
+    const btn = document.getElementById('mc-copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1500);
+  }).catch(() => {});
+}
+loadMcStatus();
+setInterval(loadMcStatus, 30000);
 </script>
 </body>
 </html>

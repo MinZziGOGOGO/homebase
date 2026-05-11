@@ -9,6 +9,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from mcstatus import JavaServer
 
 from . import stats, storage
 
@@ -131,6 +132,31 @@ async def get_weather(city: str = "Vienna"):
         raise HTTPException(status_code=502, detail=f"Weather API error: {str(e)}")
 
 
+# --- Minecraft server status ---
+
+@app.get("/api/minecraft")
+async def get_minecraft():
+    """Query local Minecraft server via mcstatus."""
+    try:
+        server = JavaServer.lookup("localhost:25565")
+        status = await server.async_status()
+        return {
+            "online": True,
+            "player_count": status.players.online,
+            "max_players": status.players.max,
+            "description": status.motd.to_plain(),
+            "latency": round(status.latency, 1),
+        }
+    except Exception:
+        return {
+            "online": False,
+            "player_count": 0,
+            "max_players": 0,
+            "description": "",
+            "latency": 0,
+        }
+
+
 # --- WebSocket for live stats ---
 
 @app.websocket("/ws/stats")
@@ -161,6 +187,8 @@ SERVICES = [
     {"name": "arcadebase", "url": "http://localhost:8090", "icon": "🕹️", "desc": "Retro arcade games"},
     {"name": "learning-tracker", "url": "http://localhost:8091", "icon": "📖", "desc": "Learning progress tracker"},
     {"name": "hermes-dashboard", "url": "http://localhost:9119", "icon": "⚡", "desc": "AI agent dashboard"},
+    {"name": "minecraft", "url": "http://localhost:25565", "icon": "⛏️", "desc": "Minecraft Paper server"},
+    {"name": "crafty", "url": "http://localhost:8444", "icon": "🖥️", "desc": "Minecraft web management"},
 ]
 
 
