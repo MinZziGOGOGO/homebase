@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import subprocess
 import httpx
 from pathlib import Path
 
@@ -243,3 +244,63 @@ async def get_services(request: Request):
         external_url = svc["url"].replace("localhost", hostname)
         results.append({**svc, "url": external_url, "up": up})
     return results
+
+
+# --- Docker container manager ---
+
+def _docker(args: list[str]) -> str:
+    """Run a docker command and return stdout, or raise HTTPException."""
+    try:
+        r = subprocess.run(["docker"] + args, capture_output=True, text=True, timeout=15)
+        if r.returncode != 0:
+            raise HTTPException(status_code=500, detail=r.stderr.strip())
+        return r.stdout
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="docker CLI not found")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="docker command timed out")
+
+
+@app.get("/api/docker/containers")
+async def list_containers():
+    """Return all containers with name, status, and image."""
+    out = _docker(["ps", "-a", "--format", "{{.Names}}\t{{.Status}}\t{{.Image}}"])
+    containers = []
+    for line in out.strip().split("\n"):
+        if not line:
+            continue
+        name, status, image = line.split("\t", 2)
+        containers.append({"name": name, "status": status, "image": image})
+    return {"containers": containers}
+
+
+@app.post("/api/docker/containers/{name}/start")
+async def start_container(name: str):
+    """Start a container by name."""
+    _docker(["start", name])
+    return {"ok": True, "name": name, "action": "start"}
+
+
+@app.post("/api/docker/containers/{name}/stop")
+async def stop_container(name: str):
+    """Stop a container by name."""
+    _docker(["stop", name])
+    return {"ok": True, "name": name, "action": "stop"}
+
+
+@app.post("/api/docker/containers/{name}/restart")
+async def restart_container(name: str):
+    """Restart a container by name."""
+    _docker(["restart", name])
+    return {"ok": True, "name": name, "action": "restart"}
+
+
+# --- SPA catch-all: serve index.html for frontend routes ---
+# Must be defined AFTER all API routes so FastAPI matches specific routes first.
+
+@app.get("/{full_path:path}")
+async def spa_catch_all(full_path: str):
+    """Catch-all route for SPA navigation (/docker, /services, etc)."""
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(str(STATIC_DIR / "index.html"))
