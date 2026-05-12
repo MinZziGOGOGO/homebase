@@ -437,6 +437,41 @@ h1 span { color: var(--accent); }
     <div class="weather-details" id="w-details"></div>
   </div>
 
+  <!-- Minecraft -->
+  <div class="card">
+    <h2>Minecraft</h2>
+    <div class="stat-grid">
+      <div>
+        <div class="stat-label">Status</div>
+        <div class="stat-value" id="mc-online" style="color:var(--red)">Offline</div>
+      </div>
+      <div>
+        <div class="stat-label">Players</div>
+        <div class="stat-value" id="mc-count">--</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="stat-label">Online now</div>
+      <div id="mc-player-list" style="color:var(--muted);font-size:0.85rem;margin-top:4px;min-height:20px">—</div>
+    </div>
+  </div>
+
+  <!-- Network -->
+  <div class="card">
+    <h2>Network</h2>
+    <div class="stat-grid">
+      <div>
+        <div class="stat-label">Download</div>
+        <div class="stat-value" id="net-down">--</div>
+      </div>
+      <div>
+        <div class="stat-label">Upload</div>
+        <div class="stat-value" id="net-up">--</div>
+      </div>
+    </div>
+    <svg id="net-spark" viewBox="0 0 200 40" style="width:100%;margin-top:10px"></svg>
+  </div>
+
   <!-- Todos -->
   <div class="card">
     <h2>Todos</h2>
@@ -557,6 +592,74 @@ async function loadWeather() {
   }
 }
 loadWeather();
+
+// --- Minecraft dashboard card ---
+async function loadMcDashboard() {
+  try {
+    const r = await fetch('/api/minecraft');
+    const d = await r.json();
+    const onlineEl = document.getElementById('mc-online');
+    const countEl = document.getElementById('mc-count');
+    const listEl = document.getElementById('mc-player-list');
+    if (d.online) {
+      onlineEl.textContent = 'Online';
+      onlineEl.style.color = 'var(--green)';
+      countEl.textContent = d.player_count + '/' + d.max_players;
+      if (d.players && d.players.length > 0) {
+        listEl.textContent = d.players.join(', ');
+        listEl.style.color = 'var(--text)';
+      } else {
+        listEl.textContent = 'No players online';
+        listEl.style.color = 'var(--muted)';
+      }
+    } else {
+      onlineEl.textContent = 'Offline';
+      onlineEl.style.color = 'var(--red)';
+      countEl.textContent = '--';
+      listEl.textContent = 'Server unreachable';
+      listEl.style.color = 'var(--muted)';
+    }
+  } catch(e) {
+    console.error('mc dash:', e);
+  }
+}
+loadMcDashboard();
+setInterval(loadMcDashboard, 30000);
+
+// --- Network ---
+const netHistory = { down: [], up: [] };
+async function loadNetwork() {
+  try {
+    const r = await fetch('/api/network');
+    const d = await r.json();
+    document.getElementById('net-down').textContent = d.download_mb_s + ' MB/s';
+    document.getElementById('net-up').textContent = d.upload_mb_s + ' MB/s';
+    netHistory.down.push(d.download_mb_s);
+    netHistory.up.push(d.upload_mb_s);
+    if (netHistory.down.length > 10) netHistory.down.shift();
+    if (netHistory.up.length > 10) netHistory.up.shift();
+    drawSparkline('net-spark', netHistory.down, netHistory.up);
+  } catch(e) {
+    console.error('net:', e);
+  }
+}
+function drawSparkline(svgId, downData, upData) {
+  const svg = document.getElementById(svgId);
+  if (!downData.length) return;
+  const w = 200, h = 40, pad = 2;
+  const maxDown = Math.max(...downData, 0.01);
+  const maxUp = Math.max(...upData, 0.01);
+  const maxVal = Math.max(maxDown, maxUp) * 1.15;
+  const scaleY = (v) => h - pad - (v / maxVal) * (h - pad * 2);
+  const scaleX = (i) => pad + (i / Math.max(downData.length - 1, 1)) * (w - pad * 2);
+  const buildPath = (data) => data.map((v, i) => (i === 0 ? 'M' : 'L') + scaleX(i) + ',' + scaleY(v)).join(' ');
+  svg.innerHTML =
+    '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="none"/>' +
+    '<path d="' + buildPath(downData) + '" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"/>' +
+    '<path d="' + buildPath(upData) + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>';
+}
+loadNetwork();
+setInterval(loadNetwork, 5000);
 
 // --- Todos ---
 async function loadTodos() {

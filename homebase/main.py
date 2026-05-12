@@ -144,6 +144,7 @@ async def get_minecraft():
             "online": True,
             "player_count": status.players.online,
             "max_players": status.players.max,
+            "players": [p.name for p in status.players.sample] if status.players.sample else [],
             "description": status.motd.to_plain(),
             "latency": round(status.latency, 1),
         }
@@ -152,9 +153,41 @@ async def get_minecraft():
             "online": False,
             "player_count": 0,
             "max_players": 0,
+            "players": [],
             "description": "",
             "latency": 0,
         }
+
+
+# --- Network speed ---
+
+def _read_net_bytes():
+    """Return (rx_bytes, tx_bytes) for the main interface from /proc/net/dev."""
+    with open("/proc/net/dev") as f:
+        lines = f.readlines()[2:]  # skip headers
+    best = (0, 0)
+    best_name = "lo"
+    for line in lines:
+        parts = line.split()
+        name = parts[0].rstrip(":")
+        rx = int(parts[1])
+        tx = int(parts[9])
+        if name != "lo" and rx + tx > best[0] + best[1]:
+            best = (rx, tx)
+            best_name = name
+    return best
+
+
+@app.get("/api/network")
+async def get_network():
+    """Return current upload/download speed in MB/s by sampling 1s apart."""
+    rx0, tx0 = _read_net_bytes()
+    await asyncio.sleep(1)
+    rx1, tx1 = _read_net_bytes()
+    return {
+        "download_mb_s": round((rx1 - rx0) / (1024 * 1024), 3),
+        "upload_mb_s": round((tx1 - tx0) / (1024 * 1024), 3),
+    }
 
 
 # --- WebSocket for live stats ---
