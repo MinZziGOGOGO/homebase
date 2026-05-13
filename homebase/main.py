@@ -3,6 +3,8 @@
 import asyncio
 import json
 import subprocess
+import time
+from datetime import datetime, timedelta
 import httpx
 from pathlib import Path
 
@@ -293,6 +295,126 @@ async def restart_container(name: str):
     """Restart a container by name."""
     _docker(["restart", name])
     return {"ok": True, "name": name, "action": "restart"}
+
+
+# ── Shorts (short-form video creator) ──────────────────────────────────────
+
+SHORTS_DIR = Path("/home/martin/projects/shortform-ai")
+SHORTS_CONFIG = SHORTS_DIR / "config.json"
+SHORTS_PERF = SHORTS_DIR / "results" / "performance.json"
+SHORTS_UPLOADS = SHORTS_DIR / "results" / "uploads.json"
+SHORTS_LOG = SHORTS_DIR / "logs" / "scheduler.log"
+SHORTS_SCRIPT = SHORTS_DIR / "scripts" / "latest_script.json"
+
+DEFAULT_SHORTS_CONFIG = {
+    "videos_per_day": 2,
+    "posting_times": ["09:00", "18:00"],
+    "topic_focus": "all",
+    "auto_post": True,
+    "paused": False,
+}
+
+TOPICS = ["all", "ai", "tech", "coding", "science"]
+
+
+@app.get("/api/shorts/config")
+async def get_shorts_config():
+    """Return current shorts config."""
+    if SHORTS_CONFIG.exists():
+        return json.loads(SHORTS_CONFIG.read_text(encoding="utf-8"))
+    return DEFAULT_SHORTS_CONFIG
+
+
+@app.post("/api/shorts/config")
+async def update_shorts_config(body: dict):
+    """Update shorts config."""
+    cfg = json.loads(SHORTS_CONFIG.read_text(encoding="utf-8")) if SHORTS_CONFIG.exists() else {}
+    cfg.update(body)
+    SHORTS_CONFIG.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+    return {"ok": True}
+
+
+@app.get("/api/shorts/stats")
+async def get_shorts_stats():
+    """Return performance summary."""
+    if not SHORTS_PERF.exists():
+        return {"total_videos": 0, "average_views_last_7_days": 0, "best_video_title": "", "best_video_views": 0, "views_trend": "No data", "last_updated": None}
+
+    records = json.loads(SHORTS_PERF.read_text(encoding="utf-8"))
+    if not records:
+        return {"total_videos": 0, "average_views_last_7_days": 0, "best_video_title": "", "best_video_views": 0, "views_trend": "No data", "last_updated": None}
+
+    total = len(records)
+
+    # Average views last 7 days
+    now = time.time()
+    recent = [r for r in records if now - r.get("upload_timestamp", 0) < 7 * 86400]
+    avg_views = round(sum(r.get("views", 0) for r in recent) / max(1, len(recent)), 1) if recent else 0
+
+    # Best video
+    best = max(records, key=lambda r: r.get("views", 0))
+    best_title = best.get("title", "")
+    best_views = best.get("views", 0)
+
+    # Trend (simple: compare last 7 vs previous 7 days)
+    recent_ids = {r.get("video_id") for r in recent}
+    older = [r for r in records if r.get("video_id") not in recent_ids]
+    recent_avg = sum(r.get("views", 0) for r in recent) / max(1, len(recent))
+    older_avg = sum(r.get("views", 0) for r in older) / max(1, len(older))
+    if older_avg > 0:
+        delta = round((recent_avg - older_avg) / older_avg * 100, 1)
+        trend = f"{'+' if delta > 0 else ''}{delta}%"
+    else:
+        trend = "New"
+
+    return {
+        "total_videos": total,
+        "average_views_last_7_days": avg_views,
+        "best_video_title": best_title,
+        "best_video_views": best_views,
+        "views_trend": trend,
+        "last_updated": records[-1].get("fetched_at") if records else None,
+    }
+
+
+@app.get("/api/shorts/queue")
+async def get_shorts_queue():
+    """Return next 3 scheduled videos with scripts if available."""
+    queue = []
+    now = time.time()
+
+    # Check if latest_script exists
+    script = None
+    if SHORTS_SCRIPT.exists():
+        script = json.loads(SHORTS_SCRIPT.read_text(encoding="utf-8"))
+
+    # Generate future posting times from config
+    cfg = DEFAULT_SHORTS_CONFIG
+    if SHORTS_CONFIG.exists():
+        cfg = json.loads(SHORTS_CONFIG.read_text(encoding="utf-8"))
+    posting_times = cfg.get("posting_times", ["09:00", "18:00"])
+    topic = cfg.get("topic_focus", "all")
+
+    for i in range(3):
+        scheduled = datetime.now() + timedelta(hours=i * 3 + 1)
+        entry = {
+            "title": script.get("title", f"Scheduled video {i+1}") if script else f"Scheduled video {i+1}",
+            "topic": topic,
+            "scheduled_time": scheduled.strftime("%H:%M"),
+            "script_ready": script is not None,
+        }
+        queue.append(entry)
+    return queue
+
+
+@app.get("/api/shorts/log")
+async def get_shorts_log():
+    """Return last 20 lines of scheduler log."""
+    if not SHORTS_LOG.exists():
+        return {"lines": []}
+    content = SHORTS_LOG.read_text(encoding="utf-8")
+    lines = content.strip().split("\n")[-20:]
+    return {"lines": lines}
 
 
 # --- SPA catch-all: serve index.html for frontend routes ---
