@@ -213,7 +213,7 @@ async def websocket_stats(ws: WebSocket):
 SERVICES = [
     {"name": "Nextcloud", "url": "http://localhost:8888", "icon": "☁️", "desc": "Self-hosted cloud storage"},
     {"name": "Kavita", "url": "http://localhost:5000", "icon": "📚", "desc": "Manga & book reader"},
-    {"name": "code-server", "url": "http://localhost:8443", "icon": "💻", "desc": "VS Code in browser"},
+    {"name": "Hermes IDE", "url": "https://localhost:8445", "icon": "🤖", "desc": "VS Code + Hermes AI agent"},
     {"name": "Pi-hole", "url": "http://localhost:8085/admin", "icon": "🛡️", "desc": "Network ad blocker"},
     {"name": "Stirling-PDF", "url": "http://localhost:8093", "icon": "📄", "desc": "PDF editor & converter"},
     {"name": "Portainer", "url": "http://localhost:9000", "icon": "🐳", "desc": "Docker container manager"},
@@ -236,7 +236,7 @@ async def get_services(request: Request):
     for svc in SERVICES:
         up = False
         try:
-            async with httpx.AsyncClient(timeout=3.0) as client:
+            async with httpx.AsyncClient(timeout=3.0, verify=False) as client:
                 # Always ping localhost — services run on the same host
                 resp = await client.get(svc["url"], follow_redirects=True)
                 up = resp.status_code < 500

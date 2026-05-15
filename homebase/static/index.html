@@ -278,13 +278,24 @@ h1 span { color: var(--accent); }
 .stat-value.counting { font-variant-numeric: tabular-nums; }
 
 /* --- Services grid enhancements --- */
-.services-grid {
+#page-services.active {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
   max-width: 1400px;
   position: relative;
   z-index: 1;
+}
+#page-docker.active {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  max-width: 1400px;
+  position: relative;
+  z-index: 1;
+}
+.services-grid {
+  display: contents;
 }
 .service-card {
   background: var(--card-bg);
