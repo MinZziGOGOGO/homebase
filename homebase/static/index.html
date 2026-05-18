@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Homebase Dashboard</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Homebase">
+  <meta name="theme-color" content="#0a0a0f">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
@@ -1001,6 +1006,13 @@ async function loadShortsLog() {
     const el = document.getElementById('shorts-log');
     el.textContent = d.lines && d.lines.length ? d.lines.join('\n') : 'No log entries yet';
   } catch(e) { console.error('shorts log:', e); }
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js');
+  });
 }
 </script>
 </body>

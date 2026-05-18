@@ -29,6 +29,15 @@ async def root():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
 
+@app.get("/static/manifest.json")
+async def manifest():
+    """Serve the PWA manifest with correct Content-Type."""
+    return FileResponse(
+        str(STATIC_DIR / "manifest.json"),
+        media_type="application/manifest+json",
+    )
+
+
 # --- Pydantic models ---
 
 class TodoCreate(BaseModel):
