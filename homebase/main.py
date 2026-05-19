@@ -599,7 +599,7 @@ def _search_github_repos(q: str) -> list[dict]:
         desc = r.get("description") or ""
         if ql in name.lower() or ql in desc.lower():
             results.append({
-                "source": "github", "icon": "📇",
+                "source": "github", "icon": "📦",
                 "title": name,
                 "snippet": desc[:200],
                 "url": r.get("html_url", ""),

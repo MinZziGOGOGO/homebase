@@ -1247,7 +1247,7 @@ async function doSearch(q){
     var r=await fetch('/api/search?q='+encodeURIComponent(q));
     var d=await r.json();
     sp.style.display='none';
-    var ic={mindbase:'🧠',wiki:'📚',reminder:'⏰',github:'📇',session:'🤖'},g={};
+    var ic={mindbase:'🧠',wiki:'📚',reminder:'⏰',github:'📦',session:'🤖'},g={};
     (d.results||[]).forEach(function(i){(g[i.source]||(g[i.source]=[])).push(i)});
     if(!Object.keys(g).length){sr.innerHTML='<div style="padding:12px;color:var(--muted);font-size:.8rem">No results</div>';return}
     var h='';
