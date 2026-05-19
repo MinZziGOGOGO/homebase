@@ -243,6 +243,59 @@ h1 span { color: var(--accent); }
 }
 @media (max-width: 600px) { body { padding: 12px; } }
 
+/* --- Touch targets: min 44x44px --- */
+.btn, .btn-sm, .todo-check, .delete-btn, .nav-tab, .mobile-tab,
+.service-card, .todo-item, .note-item, #nb, .todo-input, .note-title, .note-content,
+#search-input, #mc-copy-btn, #mc-crafty-link, .sr-i, .fbtn, #np .close,
+#pause-btn, .btn-sm[onclick^="dockerAction"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+.todo-check { width: 44px; height: 44px; border-radius: 8px; }
+.delete-btn { padding: 8px 12px; }
+.btn-sm { padding: 8px 14px; }
+.nav-tab { padding: 12px 20px; }
+.mobile-tab { padding: 8px 0; }
+.todo-item, .note-item { padding: 10px 0; }
+#nb { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
+#mc-copy-btn, #mc-crafty-link { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; }
+
+/* --- Pull-to-refresh --- */
+#ptr {
+  position: fixed;
+  top: -60px;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  transition: top 0.2s ease;
+  pointer-events: none;
+}
+#ptr.visible { top: 0; }
+#ptr .ptr-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ptrSpin 0.8s linear infinite;
+}
+@keyframes ptrSpin { to { transform: rotate(360deg); } }
+#ptr .ptr-text {
+  margin-left: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* --- Body scroll lock when panel open --- */
+body.panel-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
 /* --- Navigation --- */
 .nav {
   display: flex;
@@ -370,11 +423,60 @@ h1 span { color: var(--accent); }
 .service-card.no-link { cursor: default; }
 .service-card.no-link::after { display: none; }
 
+/* --- Mobile bottom nav --- */
+.mobile-nav{display:none}
+@media(max-width:768px){
+  .nav{display:none !important}
+  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:99;height:calc(60px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);background:var(--card-bg);border-top:1px solid var(--border);justify-content:space-around;align-items:center}
+  .mobile-tab{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0;cursor:pointer;border:none;background:none;color:var(--muted);font-size:.65rem;font-weight:600;font-family:var(--font);transition:color .15s;min-width:56px}
+  .mobile-tab .ti{font-size:1.3rem;line-height:1}
+  .mobile-tab.active{color:var(--accent)}
+  body{padding-bottom:calc(60px + env(safe-area-inset-bottom,0px) + 24px)}
+}
+
+/* --- Notification bell & slide-in panel --- */
+#nb{position:absolute;top:24px;right:24px;background:none;border:none;font-size:1.5rem;cursor:pointer;z-index:10}
+#nb .badge{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:none;align-items:center;justify-content:center}
+#nb .badge.show{display:flex}
+#np{position:fixed;top:0;right:-400px;width:380px;height:100vh;background:var(--card-bg);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:100;transition:right .3s;padding:20px;overflow-y:auto;display:flex;flex-direction:column}
+#np.open{right:0}
+#np h3{margin-bottom:6px}
+#np .close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem}
+#np .grp{margin-bottom:14px}
+#np .grp h4{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+#np .ni{font-size:.82rem;padding:6px 0;border-bottom:1px solid var(--border)}
+#np .ni .ts{font-size:.7rem;opacity:.7}
+#np .fbtn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:600;margin-bottom:14px}
+#np .overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s}
+#np.open .overlay{opacity:1}
+
+/* --- Search --- */
+#search-wrap{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:10;width:min(420px,80vw)}
+#search-input{width:100%;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none;transition:border-color .2s}
+#search-input:focus{border-color:var(--accent)}
+#search-results{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);max-height:50vh;overflow-y:auto;z-index:11}
+#search-results.show{display:block}
+.sr-grp{padding:8px 0;border-bottom:1px solid var(--border)}
+.sr-grp:last-child{border-bottom:none}
+.sr-h{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:0 12px 4px}
+.sr-i{padding:6px 12px;cursor:pointer;transition:background .15s}
+.sr-i:hover{background:var(--bg-secondary)}
+.sr-i b{display:block;font-size:.82rem;color:var(--text)}
+.sr-i small{display:block;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#search-spin{text-align:center;padding:10px;color:var(--muted);font-size:.8rem;display:none}
+
 </style>
 </head>
 <body>
 
 <h1><span>&#9670;</span> Homebase</h1>
+
+<div id="search-wrap">
+  <input id="search-input" placeholder="Search..." autocomplete="off">
+  <div id="search-results"></div>
+</div>
+
+<button id="nb" onclick="toggleNotifPanel()">&#128276;<span class="badge" id="nb-badge"></span></button>
 
 <div class="nav">
   <button class="nav-tab active" onclick="switchPage('dashboard', event)">Dashboard</button>
@@ -383,8 +485,19 @@ h1 span { color: var(--accent); }
   <button class="nav-tab" onclick="switchPage('shorts', event)">📺 Shorts</button>
 </div>
 
+<!-- Mobile bottom nav -->
+<div class="mobile-nav">
+  <button class="mobile-tab active" onclick="switchPage('dashboard',event,this)"><span class="ti">🖥️</span>Dashboard</button>
+  <button class="mobile-tab" onclick="switchPage('todos-page',event,this)"><span class="ti">✅</span>Todos</button>
+  <button class="mobile-tab" onclick="switchPage('services',event,this)"><span class="ti">🔌</span>Services</button>
+  <button class="mobile-tab" onclick="switchPage('docker',event,this)"><span class="ti">🐳</span>Docker</button>
+  <button class="mobile-tab" onclick="document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));this.classList.add('active');toggleNotifPanel()"><span class="ti">🔔</span>Alerts</button>
+</div>
+
 <!-- Dashboard page -->
 <div class="page active" id="page-dashboard">
+<!-- Pull-to-refresh indicator -->
+<div id="ptr"><div class="ptr-spinner"></div><span class="ptr-text">Refreshing...</span></div>
 <div class="grid">
 
   <!-- CPU -->
@@ -592,6 +705,18 @@ h1 span { color: var(--accent); }
 <!-- Docker page -->
 <div class="page" id="page-docker">
   <div class="services-grid" id="docker-grid"></div>
+</div>
+
+<!-- Todos mobile page -->
+<div class="page" id="page-todos-page">
+  <div class="grid">
+    <div class="card">
+      <h2>Todos</h2>
+      <input class="todo-input" id="todo-input-m" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTodoM()">
+      <button class="btn" onclick="addTodoM()">Add</button>
+      <ul class="todo-list" id="todo-list-m"></ul>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -815,16 +940,23 @@ function escapeHtml(s) {
 }
 
 // --- Page switching ---
-function switchPage(name, e) {
+function switchPage(name, e, mb) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-tab,.mobile-tab').forEach(b => b.classList.remove('active'));
   var pageEl = document.getElementById('page-' + name);
   if (!pageEl) { console.warn('Unknown page:', name); return; }
   pageEl.classList.add('active');
   if (e && e.target) e.target.classList.add('active');
+  if (mb) mb.classList.add('active');
+  // Sync both nav bars
+  var dt = document.querySelector('.nav-tab[onclick*="switchPage(\'' + name + '\'"]');
+  if (dt) dt.classList.add('active');
+  var mt = document.querySelector('.mobile-tab[onclick*="switchPage(\'' + name + '\'"]');
+  if (mt) mt.classList.add('active');
   if (name === 'services') loadServices();
   if (name === 'docker') loadDocker();
   if (name === 'shorts') { loadShortsConfig(); loadShortsStats(); loadShortsQueue(); loadShortsLog(); }
+  if (name === 'todos-page') loadTodosM();
 }
 
 // --- Services ---
@@ -1007,6 +1139,86 @@ async function loadShortsLog() {
     el.textContent = d.lines && d.lines.length ? d.lines.join('\n') : 'No log entries yet';
   } catch(e) { console.error('shorts log:', e); }
 }
+// --- Notifications ---
+function toggleNotifPanel(){var p=document.getElementById('np');p.classList.toggle('open');if(p.classList.contains('open'))loadNotifs()}
+async function loadNotifs(){try{var r=await fetch('http://localhost:8102/notifications');var ns=await r.json();var urgent=ns.filter(function(n){return n.level==='urgent'});var normal=ns.filter(function(n){return n.level==='normal'});var badge=document.getElementById('nb-badge');var cnt=urgent.length+normal.length;if(cnt){badge.textContent=cnt;badge.classList.add('show')}else{badge.classList.remove('show')}var g=document.getElementById('np-groups');if(!ns.length){g.innerHTML='<div class="empty-msg">No pending notifications</div>';return}var fmt=function(t){return new Date(t).toLocaleString()};var h='';if(urgent.length)h+='<div class="grp"><h4 style="color:var(--red)">🔴 Urgent</h4>'+urgent.map(function(n){return'<div class="ni">['+escapeHtml(n.service)+'] '+escapeHtml(n.message)+'<br><span class="ts">'+fmt(n.timestamp)+'</span></div>'}).join('')+'</div>';if(normal.length)h+='<div class="grp"><h4 style="color:var(--yellow)">🟡 Normal</h4>'+normal.map(function(n){return'<div class="ni">['+escapeHtml(n.service)+'] '+escapeHtml(n.message)+'<br><span class="ts">'+fmt(n.timestamp)+'</span></div>'}).join('')+'</div>';g.innerHTML=h}catch(e){document.getElementById('np-groups').innerHTML='<div class="empty-msg">Notification service unreachable</div>'}}
+async function flushDigest(){try{var r=await fetch('http://localhost:8102/notifications/flush',{method:'POST'});var d=await r.json();loadNotifs()}catch(e){console.error('flush:',e)}}
+loadNotifs();setInterval(loadNotifs,60000);
+
+// -- Mobile todos --
+async function loadTodosM(){var r=await fetch('/api/todos');var items=await r.json();var list=document.getElementById('todo-list-m');if(!items.length){list.innerHTML='<div class="empty-msg">No tasks yet</div>';return;}list.innerHTML=items.map(t=>'<li class="todo-item'+(t.completed?' completed':'')+'"><button class="todo-check" onclick="toggleTodo(\''+t.id+'\');loadTodosM();loadTodos()">'+(t.completed?'✓':'')+'</button><span class="todo-text">'+escapeHtml(t.text)+'</span><button class="delete-btn" onclick="deleteTodo(\''+t.id+'\');loadTodosM();loadTodos()">✕</button></li>').join('')}
+async function addTodoM(){var inp=document.getElementById('todo-input-m');var text=inp.value.trim();if(!text)return;await fetch('/api/todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});inp.value='';loadTodosM();loadTodos()}
+
+// --- Touch: swipe tabs + pull-to-refresh + scroll lock ---
+(function(){
+  var tabs = ['dashboard','services','docker','shorts'];
+  var tabOrder = ['dashboard','todos-page','services','docker','shorts'];
+  var startX=0, startY=0, startT=0, isPulling=false, pullY=0;
+  var dashboardEl = document.getElementById('page-dashboard');
+  var ptrEl = document.getElementById('ptr');
+
+  document.addEventListener('touchstart', function(e){
+    var t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; startT = Date.now();
+    var activePage = document.querySelector('.page.active');
+    // Pull-to-refresh: only when at top of dashboard
+    isPulling = (activePage && activePage.id === 'page-dashboard' && window.scrollY <= 5);
+    pullY = 0;
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    if (!isPulling) return;
+    var t = e.touches[0];
+    var dy = t.clientY - startY;
+    if (dy > 0 && window.scrollY <= 5) {
+      pullY = dy;
+      if (pullY > 40) {
+        ptrEl.classList.add('visible');
+      }
+    }
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(e){
+    var dx = (e.changedTouches[0].clientX - startX);
+    var dy = (e.changedTouches[0].clientY - startY);
+    var dt = Date.now() - startT;
+
+    // Swipe tabs: min 60px horizontal, max 150ms, more horizontal than vertical
+    if (Math.abs(dx) >= 60 && dt <= 150 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      var active = document.querySelector('.page.active');
+      var cur = active ? active.id.replace('page-','') : '';
+      var idx = tabOrder.indexOf(cur);
+      if (idx >= 0) {
+        if (dx < 0 && idx < tabOrder.length - 1) switchPage(tabOrder[idx+1]);
+        if (dx > 0 && idx > 0) switchPage(tabOrder[idx-1]);
+      }
+    }
+
+    // Pull-to-refresh trigger at 80px
+    if (isPulling && pullY >= 80) {
+      // Re-fetch all dashboard stats
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({action:'refresh'}));
+      }
+      loadWeather();
+      loadMcDashboard();
+      loadNetwork();
+      loadTodos();
+      loadNotes();
+    }
+    ptrEl.classList.remove('visible');
+    isPulling = false; pullY = 0;
+  });
+})();
+
+// --- Body scroll lock when notification panel open ---
+(function(){
+  var origToggle = toggleNotifPanel;
+  toggleNotifPanel = function(){
+    origToggle();
+    document.body.classList.toggle('panel-open', document.getElementById('np').classList.contains('open'));
+  };
+})();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
@@ -1015,5 +1227,14 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- Notification slide-in panel -->
+<div id="np"><div class="overlay" onclick="toggleNotifPanel()"></div>
+  <button class="close" onclick="toggleNotifPanel()">✕</button>
+  <h3>🔔 Notifications</h3>
+  <button class="fbtn" id="np-flush" onclick="flushDigest()">Send digest now</button>
+  <div id="np-groups"></div>
+</div>
+
 </body>
 </html>
