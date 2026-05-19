@@ -426,6 +426,249 @@ async def get_shorts_log():
     return {"lines": lines}
 
 
+# --- Unified Search ---
+
+REAL_HOME = Path("/home/martin")
+SHOPPING_LIST = REAL_HOME / ".hermes" / "shopping_list.md"
+REMINDERS_DIR = REAL_HOME / ".hermes" / "reminders"
+PROJECTS_DIR = REAL_HOME / "projects"
+
+
+async def _http_search(url: str, key: str, params: dict | None = None) -> list[dict]:
+    """Generic HTTP search — returns JSON list or data[key] list."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url, params=params or {})
+            resp.raise_for_status()
+            data = resp.json()
+            return data if isinstance(data, list) else data.get(key, [])
+    except Exception:
+        return []
+
+
+async def _search_mindbase(q: str) -> list[dict]:
+    entries = await _http_search(
+        "http://localhost:8091/api/entries", "entries", {"search": q},
+    )
+    ql = q.lower()
+    return [
+        {
+            "source": "mindbase", "icon": "🧠",
+            "title": e.get("title", e.get("name", "")),
+            "snippet": (e.get("content") or e.get("snippet", ""))[:200],
+            "url": e.get("url", f"http://localhost:8091/entries/{e.get('id', '')}"),
+        }
+        for e in entries
+        if ql in (e.get("title", "") + e.get("content", "")).lower()
+    ][:10]
+
+
+async def _search_wiki(q: str) -> list[dict]:
+    pages = await _http_search(
+        "http://localhost:8101/api/search", "results", {"q": q},
+    )
+    return [
+        {
+            "source": "wiki", "icon": "📖",
+            "title": p.get("title", ""),
+            "snippet": (p.get("snippet") or p.get("content", ""))[:200],
+            "url": p.get("url", f"http://localhost:8101/wiki/{p.get('slug', '')}"),
+        }
+        for p in pages
+    ][:10]
+
+
+async def _search_notifications(q: str) -> list[dict]:
+    notifs = await _http_search(
+        "http://localhost:8102/notifications", "notifications",
+    )
+    ql = q.lower()
+    return [
+        {
+            "source": "notifications", "icon": "🔔",
+            "title": (n.get("title") or n.get("message", ""))[:100],
+            "snippet": (n.get("body") or n.get("message", ""))[:200],
+            "url": None,
+        }
+        for n in notifs[:20]
+        if ql in (n.get("title", "") + n.get("body", "") + n.get("message", "")).lower()
+    ][:10]
+
+
+def _search_shopping(q: str) -> list[dict]:
+    if not SHOPPING_LIST.exists():
+        return []
+    ql = q.lower()
+    return [
+        {
+            "source": "shopping", "icon": "🛒",
+            "title": line.strip()[:100], "snippet": line.strip()[:200],
+            "url": None,
+        }
+        for line in SHOPPING_LIST.read_text(encoding="utf-8").splitlines()
+        if ql in line.lower()
+    ][:10]
+
+
+def _search_reminders(q: str) -> list[dict]:
+    if not REMINDERS_DIR.exists():
+        return []
+    ql = q.lower()
+    results = []
+    for f in sorted(REMINDERS_DIR.iterdir()):
+        if not f.is_file() or f.suffix not in (".md", ".txt"):
+            continue
+        content = f.read_text(encoding="utf-8")[:2000]
+        if ql in content.lower():
+            results.append({
+                "source": "reminders", "icon": "📝",
+                "title": f.stem, "snippet": content[:200], "url": None,
+            })
+        if len(results) >= 10:
+            break
+    return results
+
+
+def _search_git(q: str) -> list[dict]:
+    if not PROJECTS_DIR.exists():
+        return []
+    results = []
+    repos = sorted(
+        d for d in PROJECTS_DIR.iterdir()
+        if d.is_dir() and (d / ".git").exists()
+    )[:10]
+    for repo in repos:
+        try:
+            r = subprocess.run(
+                ["git", "-C", str(repo), "log", "--oneline", "--all",
+                 "-20", f"--grep={q}", "-i"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for line in r.stdout.strip().splitlines():
+                if not line:
+                    continue
+                results.append({
+                    "source": "git", "icon": "📦",
+                    "title": f"{repo.name}: {line}",
+                    "snippet": line, "url": None,
+                })
+                if len(results) >= 10:
+                    return results
+        except Exception:
+            continue
+    return results
+
+
+GITHUB_CACHE = Path("/tmp/github_cache.json")
+
+
+def _fetch_github_repos() -> list[dict]:
+    """Fetch MinZziGOGOGO repos from GitHub API with 1-hour file cache."""
+    now = time.time()
+    if GITHUB_CACHE.exists():
+        try:
+            cached = json.loads(GITHUB_CACHE.read_text(encoding="utf-8"))
+            if cached.get("fetched_at", 0) > now - 3600:
+                return cached.get("repos", [])
+        except Exception:
+            pass
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "https://api.github.com/users/MinZziGOGOGO/repos",
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "homebase-search"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            repos = json.loads(resp.read().decode("utf-8"))
+            if isinstance(repos, list):
+                GITHUB_CACHE.write_text(
+                    json.dumps({"fetched_at": now, "repos": repos}), encoding="utf-8"
+                )
+                return repos
+    except Exception:
+        pass
+    return []
+
+
+def _search_github_repos(q: str) -> list[dict]:
+    repos = _fetch_github_repos()
+    ql = q.lower()
+    results = []
+    for r in repos:
+        name = r.get("name", "")
+        desc = r.get("description") or ""
+        if ql in name.lower() or ql in desc.lower():
+            results.append({
+                "source": "github", "icon": "📇",
+                "title": name,
+                "snippet": desc[:200],
+                "url": r.get("html_url", ""),
+            })
+        if len(results) >= 10:
+            break
+    return results
+
+
+SESSIONS_DIR = REAL_HOME / ".hermes" / "sessions"
+
+
+def _search_sessions(q: str) -> list[dict]:
+    if not SESSIONS_DIR.exists():
+        return []
+    ql = q.lower()
+    files = sorted(
+        (f for f in SESSIONS_DIR.iterdir() if f.is_file() and f.suffix == ".jsonl" and not f.name.startswith(".")),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )[:20]
+    results = []
+    for f in files:
+        try:
+            with f.open(encoding="utf-8") as fh:
+                for line in fh:
+                    obj = json.loads(line)
+                    if obj.get("role") == "user":
+                        title = (obj.get("content") or "")[:100]
+                        if ql in title.lower():
+                            results.append({
+                                "source": "session", "icon": "🤖",
+                                "title": title,
+                                "snippet": title[:200],
+                                "url": None,
+                            })
+                        break
+                if len(results) >= 10:
+                    break
+        except Exception:
+            continue
+    return results
+
+
+@app.get("/api/search")
+async def unified_search(q: str = ""):
+    """Search across mindbase, wiki, notifications, shopping, reminders, git, github, sessions."""
+    if not q.strip():
+        return []
+    loop = asyncio.get_event_loop()
+    mindbase, wiki, notifications, shopping, reminders, git, github, sessions = await asyncio.gather(
+        _search_mindbase(q),
+        _search_wiki(q),
+        _search_notifications(q),
+        loop.run_in_executor(None, _search_shopping, q),
+        loop.run_in_executor(None, _search_reminders, q),
+        loop.run_in_executor(None, _search_git, q),
+        loop.run_in_executor(None, _search_github_repos, q),
+        loop.run_in_executor(None, _search_sessions, q),
+    )
+    all_results = mindbase + wiki + notifications + shopping + reminders + git + github + sessions
+    ql = q.lower()
+    all_results.sort(key=lambda r: -sum((
+        r["title"].lower().count(ql) * 3,
+        r["snippet"].lower().count(ql),
+    )))
+    return {"results": all_results[:30]}
+
+
 # --- SPA catch-all: serve index.html for frontend routes ---
 # Must be defined AFTER all API routes so FastAPI matches specific routes first.
 
