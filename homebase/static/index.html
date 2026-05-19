@@ -1228,6 +1228,50 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
+<script>
+// --- Search ---
+var searchTimer=null;
+var sw=document.getElementById('search-wrap');
+var si=document.getElementById('search-input');
+var sr=document.getElementById('search-results');
+var sp=document.createElement('div');
+sp.id='search-spin';sp.textContent='⏳';sr.appendChild(sp);
+
+si.addEventListener('input',function(){clearTimeout(searchTimer);var q=this.value.trim();if(!q){sr.classList.remove('show');return}searchTimer=setTimeout(function(){doSearch(q)},300)});
+si.addEventListener('keydown',function(e){if(e.key==='Escape'){sr.classList.remove('show');this.blur()}});
+document.addEventListener('click',function(e){if(!sw.contains(e.target))sr.classList.remove('show')});
+
+async function doSearch(q){
+  sp.style.display='block';sr.classList.add('show');sr.innerHTML='';sr.appendChild(sp);
+  try{
+    var r=await fetch('/api/search?q='+encodeURIComponent(q));
+    var d=await r.json();
+    sp.style.display='none';
+    var ic={mindbase:'🧠',wiki:'📚',reminder:'⏰'},g={};
+    (d.results||[]).forEach(function(i){(g[i.source]||(g[i.source]=[])).push(i)});
+    if(!Object.keys(g).length){sr.innerHTML='<div style="padding:12px;color:var(--muted);font-size:.8rem">No results</div>';return}
+    var h='';
+    for(var s in g){
+      h+='<div class="sr-grp"><div class="sr-h">'+(ic[s]||'🔎')+' '+s+'</div>'+g[s].map(function(i){
+        return'<div class="sr-i" data-s="'+s+'" data-t="'+escapeHtml(i.title)+'" data-u="'+escapeHtml(i.id||i.title||'')+'" data-sn="'+escapeHtml(i.snippet||'')+'"><b>'+escapeHtml(i.title)+'</b><small>'+escapeHtml(i.snippet||'')+'</small></div>'
+      }).join('')+'</div>'
+    }
+    sr.innerHTML=h;
+    sr.querySelectorAll('.sr-i').forEach(function(el){
+      el.onclick=function(){
+        var s=this.dataset.s,t=this.dataset.t,u=this.dataset.u,sn=this.dataset.sn;
+        if(s==='mindbase')window.open('http://localhost:8200/?id='+encodeURIComponent(u),'_blank');
+        else if(s==='wiki')window.open('http://localhost:8300/'+encodeURIComponent(t),'_blank');
+        else if(s==='reminder')navigator.clipboard.writeText(t+(sn?' — '+sn:''));
+      }
+    })
+  }catch(e){
+    sp.style.display='none';
+    sr.innerHTML='<div style="padding:12px;color:var(--red);font-size:.8rem">Search failed</div>'
+  }
+}
+</script>
+
 <!-- Notification slide-in panel -->
 <div id="np"><div class="overlay" onclick="toggleNotifPanel()"></div>
   <button class="close" onclick="toggleNotifPanel()">✕</button>
