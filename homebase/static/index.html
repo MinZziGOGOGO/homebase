@@ -465,6 +465,191 @@ body.panel-open {
 .sr-i small{display:block;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #search-spin{text-align:center;padding:10px;color:var(--muted);font-size:.8rem;display:none}
 
+/* ── Premium Calendar Widget ── */
+.cal-wrap {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 1;
+}
+.cal-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  overflow: hidden;
+}
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.cal-nav {
+  background: none; border: none; color: var(--muted);
+  font-size: 1.2rem; cursor: pointer; padding: 6px 10px;
+  border-radius: 6px; transition: 0.15s; min-width: 44px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-nav:hover { color: var(--text); background: var(--card-hover); }
+.cal-month-title {
+  font-size: 1.15rem; font-weight: 700; color: var(--text);
+  text-align: center; flex: 1;
+}
+.cal-today-btn {
+  background: var(--card-hover); color: var(--muted); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer;
+  font-weight: 600; transition: 0.15s; min-height: 44px; display: flex; align-items: center;
+}
+.cal-today-btn:hover { color: var(--accent); border-color: var(--accent); background: rgba(123,147,255,0.1); }
+.cal-add-btn {
+  background: var(--accent); color: #fff; border: none;
+  padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer;
+  font-weight: 600; margin-left: 8px; transition: 0.15s; min-height: 44px;
+  display: flex; align-items: center; gap: 4px;
+}
+.cal-add-btn:hover { box-shadow: 0 0 12px var(--accent-glow); transform: scale(1.02); }
+.cal-grid-wrap {
+  position: relative; overflow: hidden;
+}
+.cal-month-slide {
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: 36px repeat(7, 1fr);
+  gap: 1px;
+}
+.cal-wkday {
+  font-size: 0.7rem; font-weight: 700; color: var(--muted);
+  text-align: center; padding: 6px 0; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.cal-wknum {
+  font-size: 0.7rem; color: var(--muted); text-align: center;
+  padding: 8px 4px; display: flex; align-items: center; justify-content: center;
+}
+.cal-day {
+  position: relative; aspect-ratio: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; padding: 6px 4px 8px;
+  cursor: pointer; border-radius: 8px; transition: background 0.15s ease;
+  user-select: none;
+}
+.cal-day:hover { background: rgba(123,147,255,0.08); }
+.cal-day.today { background: rgba(123,147,255,0.1); }
+.cal-day.today .cal-day-num {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 0 14px rgba(123,147,255,0.4);
+}
+.cal-day.curweek { background: rgba(123,147,255,0.04); }
+.cal-day.other { opacity: 0.3; pointer-events: none; }
+.cal-day.selected { background: rgba(123,147,255,0.15); }
+.cal-day-num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease;
+}
+.cal-dots {
+  display: flex; gap: 3px; margin-top: 2px; flex-wrap: wrap; justify-content: center;
+}
+.cal-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+}
+.cal-dot-plus {
+  font-size: 0.6rem; color: var(--muted); line-height: 1;
+}
+/* Day detail panel */
+.cal-panel-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+  display: none; backdrop-filter: blur(2px);
+}
+.cal-panel-overlay.show { display: block; }
+.cal-panel {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+  width: 100%; max-width: 600px; max-height: 55vh;
+  background: var(--card-bg); border-radius: 16px 16px 0 0;
+  border: 1px solid var(--border); border-bottom: none;
+  z-index: 101; padding: 0; overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.cal-panel.show { transform: translateX(-50%) translateY(0); }
+.cal-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.cal-panel-title { font-size: 1.05rem; font-weight: 700; }
+.cal-panel-close {
+  background: none; border: none; color: var(--muted); font-size: 1.4rem;
+  cursor: pointer; padding: 4px 8px; min-width: 44px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-panel-close:hover { color: var(--text); }
+.cal-panel-body {
+  padding: 16px 20px; overflow-y: auto; max-height: calc(55vh - 60px);
+}
+.cal-event-card {
+  display: flex; gap: 10px; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border); margin-bottom: 8px;
+  transition: background 0.15s;
+}
+.cal-event-card:hover { background: rgba(123,147,255,0.05); }
+.cal-event-color {
+  width: 3px; border-radius: 2px; flex-shrink: 0;
+}
+.cal-event-time { font-size: 0.75rem; color: var(--muted); min-width: 50px; }
+.cal-event-info { flex: 1; }
+.cal-event-title { font-size: 0.9rem; font-weight: 600; }
+.cal-event-desc { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+.cal-event-del {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 0.8rem; padding: 4px; opacity: 0; transition: 0.15s;
+  min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;
+}
+.cal-event-card:hover .cal-event-del { opacity: 0.5; }
+.cal-event-del:hover { opacity: 1 !important; color: var(--red); }
+.cal-empty { text-align: center; color: var(--muted); padding: 20px 0; font-size: 0.85rem; }
+
+/* Add event modal */
+.cal-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.cal-modal-overlay.show { display: flex; }
+.cal-modal {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; width: 90%; max-width: 420px;
+  transform: scale(0.95); opacity: 0; transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: var(--shadow-lg);
+}
+.cal-modal-overlay.show .cal-modal { transform: scale(1); opacity: 1; }
+.cal-modal h3 { font-size: 1.1rem; margin-bottom: 16px; }
+.cal-modal input, .cal-modal textarea, .cal-modal select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); padding: 10px 12px;
+  font-size: 0.9rem; font-family: var(--font); margin-bottom: 10px;
+}
+.cal-modal input:focus, .cal-modal textarea:focus { outline: none; border-color: var(--accent); }
+.cal-modal textarea { min-height: 60px; resize: vertical; }
+.cal-color-row { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; justify-content: center; }
+.cal-color-pick {
+  width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent;
+  transition: 0.15s;
+}
+.cal-color-pick:hover { transform: scale(1.15); }
+.cal-color-pick.selected { border-color: var(--text); box-shadow: 0 0 8px rgba(255,255,255,0.2); }
+.cal-modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+.cal-modal-btns button { flex: 1; }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .cal-grid { grid-template-columns: repeat(7, 1fr); }
+  .cal-wknum { display: none; }
+  .cal-wkday { padding: 4px 0; }
+  .cal-day { aspect-ratio: auto; padding: 4px 2px 6px; }
+  .cal-day-num { width: 26px; height: 26px; font-size: 0.75rem; }
+  .cal-modal { width: 94%; padding: 20px; }
+  .cal-panel { border-radius: 12px 12px 0 0; }
+}
+
 </style>
 </head>
 <body>
@@ -621,6 +806,53 @@ body.panel-open {
   </div>
 
 </div>
+</div>
+
+  <!-- Premium Calendar Widget -->
+  <div class="cal-wrap">
+    <div class="cal-card">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="cal.prevMonth()">◀</button>
+        <div class="cal-month-title" id="cal-month-title">June 2026</div>
+        <button class="cal-nav" onclick="cal.nextMonth()">▶</button>
+        <button class="cal-today-btn" onclick="cal.goToday()">Today</button>
+        <button class="cal-add-btn" onclick="cal.openAddModal()">+ Event</button>
+      </div>
+      <div class="cal-grid-wrap">
+        <div class="cal-month-slide" id="cal-month-slide">
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Detail Panel -->
+  <div class="cal-panel-overlay" id="cal-panel-overlay" onclick="cal.closePanel()"></div>
+  <div class="cal-panel" id="cal-panel">
+    <div class="cal-panel-header">
+      <div class="cal-panel-title" id="cal-panel-title"></div>
+      <button class="cal-panel-close" onclick="cal.closePanel()">×</button>
+    </div>
+    <div class="cal-panel-body" id="cal-panel-body"></div>
+  </div>
+
+  <!-- Add Event Modal -->
+  <div class="cal-modal-overlay" id="cal-modal-overlay" onclick="cal.closeModal(event)">
+    <div class="cal-modal" id="cal-modal" onclick="event.stopPropagation()">
+      <h3>Add Event</h3>
+      <input type="text" id="cal-ev-title" placeholder="Event title">
+      <input type="date" id="cal-ev-date">
+      <input type="time" id="cal-ev-time">
+      <label style="color:var(--muted);font-size:0.75rem;margin-bottom:6px;display:block">Color</label>
+      <div class="cal-color-row" id="cal-color-row"></div>
+      <textarea id="cal-ev-desc" placeholder="Description (optional)"></textarea>
+      <div class="cal-modal-btns">
+        <button class="btn" style="background:var(--border);color:var(--text)" onclick="cal.closeModal()">Cancel</button>
+        <button class="btn" onclick="cal.saveEvent()">Save Event</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Services page -->
@@ -1271,6 +1503,201 @@ async function doSearch(q){
     sr.innerHTML='<div style="padding:12px;color:var(--red);font-size:.8rem">Search failed</div>'
   }
 }
+
+// ── Premium Calendar Widget ──
+const EVT_COLORS = ['#7b93ff','#ff6b9d','#ff9f43','#4ecdc4','#a29bfe','#feca57'];
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const cal = {
+  today: new Date(),
+  curDate: new Date(),
+  events: [],
+  selDay: null,
+
+  async init() {
+    this.curDate = new Date(this.today.getFullYear(), this.today.getMonth(), 1);
+    document.getElementById('cal-ev-date').value = this._fmtDate(this.today);
+    this._buildColorPicks();
+    await this._loadEvents();
+    this.render();
+  },
+
+  async _loadEvents() {
+    try {
+      const r = await fetch('/api/calendar/events');
+      if (r.ok) this.events = await r.json();
+    } catch(e) { this.events = []; }
+  },
+
+  _fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; },
+  _fmtDMY(d) { return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; },
+
+  getEventsForDay(ds) {
+    return this.events.filter(e => {
+      const eventDate = e.start ? e.start.split('T')[0] : '';
+      return eventDate === ds;
+    });
+  },
+
+  _buildColorPicks() {
+    const row = document.getElementById('cal-color-row');
+    row.innerHTML = EVT_COLORS.map((c,i) =>
+      `<div class="cal-color-pick${i===0?' selected':''}" style="background:${c}" onclick="cal._pickColor(this,'${c}')"></div>`).join('');
+    window._selColor = EVT_COLORS[0];
+  },
+  _pickColor(el, c) {
+    document.querySelectorAll('.cal-color-pick').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected'); window._selColor = c;
+  },
+
+  prevMonth() { this.curDate.setMonth(this.curDate.getMonth()-1); this.render(); },
+  nextMonth() { this.curDate.setMonth(this.curDate.getMonth()+1); this.render(); },
+  goToday() { this.curDate = new Date(this.today.getFullYear(), this.today.getMonth(), 1); this.render(); },
+
+  render() {
+    const y = this.curDate.getFullYear(), m = this.curDate.getMonth();
+    document.getElementById('cal-month-title').textContent = `${MONTHS[m]} ${y}`;
+
+    const fd = new Date(y, m, 1);
+    let startDow = fd.getDay(); startDow = startDow === 0 ? 6 : startDow-1;
+    const nDays = new Date(y, m+1, 0).getDate();
+    const prevDays = new Date(y, m, 0).getDate();
+
+    const wkLabels = '<div class="cal-wknum" style="border:none">&nbsp;</div>' + DAYS.map(d => `<div class="cal-wkday">${d}</div>`).join('');
+
+    let cells = '';
+    let dayCounter = 1, nextMonthDay = 1;
+    const totalRows = Math.ceil((startDow + nDays) / 7);
+    const todayDs = this._fmtDate(this.today);
+
+    // Week number calculation - ISO week
+    const getWeek = (d) => { const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7)); const ys=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-ys)/864e5+1)/7); };
+
+    for (let row = 0; row < totalRows; row++) {
+      const anchorDay = new Date(y, m, Math.min(dayCounter, nDays));
+      const wn = getWeek(anchorDay);
+      cells += `<div class="cal-wknum">${wn}</div>`;
+      for (let col = 0; col < 7; col++) {
+        if (row === 0 && col < startDow) {
+          const d = prevDays - startDow + col + 1;
+          cells += `<div class="cal-day other"><div class="cal-day-num">${d}</div></div>`;
+        } else if (dayCounter > nDays) {
+          cells += `<div class="cal-day other"><div class="cal-day-num">${nextMonthDay++}</div></div>`;
+        } else {
+          const ds = this._fmtDate(new Date(y, m, dayCounter));
+          const isToday = ds === todayDs;
+          const evs = this.getEventsForDay(ds);
+
+          // Current week highlight
+          const cwStart = new Date(this.today);
+          cwStart.setDate(cwStart.getDate() - (cwStart.getDay()===0?6:cwStart.getDay()-1));
+          const cwEnd = new Date(cwStart); cwEnd.setDate(cwEnd.getDate()+6);
+          const dObj = new Date(y, m, dayCounter);
+          const inCurWeek = dObj >= cwStart && dObj <= cwEnd;
+
+          const cls = ['cal-day'];
+          if (isToday) cls.push('today');
+          else if (inCurWeek) cls.push('curweek');
+          if (ds === this.selDay) cls.push('selected');
+
+          let dots = '';
+          const uniqueColors = [...new Set(evs.map(e => e.color || '#7b93ff'))];
+          for (let i=0; i<Math.min(uniqueColors.length, 3); i++) {
+            dots += `<span class="cal-dot" style="background:${uniqueColors[i]}"></span>`;
+          }
+          if (uniqueColors.length > 3) dots += `<span class="cal-dot-plus">+${uniqueColors.length-3}</span>`;
+
+          cells += `<div class="${cls.join(' ')}" data-date="${ds}" onclick="cal.openDay('${ds}')"><div class="cal-day-num">${dayCounter}</div><div class="cal-dots">${dots}</div></div>`;
+          dayCounter++;
+        }
+      }
+    }
+
+    document.getElementById('cal-grid').innerHTML = wkLabels + cells;
+  },
+
+  openDay(ds) {
+    this.selDay = ds;
+    const evs = this.getEventsForDay(ds);
+    const d = new Date(ds + 'T00:00:00');
+    const dow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+    document.getElementById('cal-panel-title').textContent = `${dow}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    const body = document.getElementById('cal-panel-body');
+    if (evs.length === 0) {
+      body.innerHTML = '<div class="cal-empty">No events for this day</div>';
+    } else {
+      body.innerHTML = evs.map(e => {
+        const t = e.start ? e.start.split('T')[1]?.substring(0,5) : '';
+        const c = e.color || '#7b93ff';
+        const eid = e.id;
+        return `<div class="cal-event-card">
+          <div class="cal-event-color" style="background:${c}"></div>
+          <div class="cal-event-time">${t || 'All day'}</div>
+          <div class="cal-event-info"><div class="cal-event-title">${e.title||'Event'}</div>${e.description?`<div class="cal-event-desc">${e.description}</div>`:''}</div>
+          <button class="cal-event-del" onclick="cal.deleteEvent('${eid}')">×</button>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('cal-panel-overlay').classList.add('show');
+    document.getElementById('cal-panel').classList.add('show');
+    this.render();
+  },
+
+  closePanel() {
+    document.getElementById('cal-panel-overlay').classList.remove('show');
+    document.getElementById('cal-panel').classList.remove('show');
+    this.selDay = null; this.render();
+  },
+
+  openAddModal() {
+    document.getElementById('cal-ev-title').value = '';
+    document.getElementById('cal-ev-date').value = this.selDay || this._fmtDate(this.today);
+    document.getElementById('cal-ev-time').value = '';
+    document.getElementById('cal-ev-desc').value = '';
+    document.getElementById('cal-modal-overlay').classList.add('show');
+  },
+
+  closeModal(e) {
+    if (e && e.target !== document.getElementById('cal-modal-overlay')) return;
+    document.getElementById('cal-modal-overlay').classList.remove('show');
+  },
+
+  async saveEvent() {
+    const title = document.getElementById('cal-ev-title').value.trim();
+    if (!title) return;
+    const date = document.getElementById('cal-ev-date').value;
+    const time = document.getElementById('cal-ev-time').value;
+    const desc = document.getElementById('cal-ev-desc').value.trim();
+    const color = window._selColor || EVT_COLORS[0];
+    const start = time ? `${date}T${time}:00` : `${date}T00:00:00`;
+
+    try {
+      const r = await fetch('/api/calendar/events', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({title, start, color, description: desc || ''})
+      });
+      if (r.ok) {
+        document.getElementById('cal-modal-overlay').classList.remove('show');
+        await this._loadEvents();
+        this.selDay = date; this.render();
+        this.openDay(date);
+      }
+    } catch(e) { alert('Failed to save event'); }
+  },
+
+  async deleteEvent(id) {
+    if (!id) return;
+    try {
+      await fetch(`/api/calendar/events/${id}`, {method:'DELETE'});
+      await this._loadEvents();
+      if (this.selDay) this.openDay(this.selDay); else this.render();
+    } catch(e) {}
+  }
+};
+
+cal.init();
+
 </script>
 
 <!-- Notification slide-in panel -->
