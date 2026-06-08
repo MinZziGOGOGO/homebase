@@ -27,7 +27,7 @@ LOGS_DIR = SHORTFORM_DIR / "logs"
 SCHEDULER_LOG = LOGS_DIR / "scheduler.log"
 SCRIPTS_DIR = SHORTFORM_DIR / "scripts"
 LATEST_SCRIPT = SCRIPTS_DIR / "latest_script.json"
-STATIC_DIR = Path(__file__).parent
+STATIC_DIR = Path(__file__).parent / "homebase" / "static"
 
 app = FastAPI(title="homebase")
 
