@@ -220,6 +220,7 @@ async def websocket_stats(ws: WebSocket):
 # --- Services status ---
 
 SERVICES = [
+    {"name": "Globe", "url": "http://localhost:8099", "icon": "🌍", "desc": "Interactive 3D Earth globe"},
     {"name": "Nextcloud", "url": "http://localhost:8888", "icon": "☁️", "desc": "Self-hosted cloud storage"},
     {"name": "Kavita", "url": "http://localhost:5000", "icon": "📚", "desc": "Manga & book reader"},
     {"name": "Hermes IDE", "url": "https://localhost:8445", "icon": "🤖", "desc": "VS Code + Hermes AI agent"},
