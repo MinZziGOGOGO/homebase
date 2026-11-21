@@ -32,7 +32,20 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --text-xs: clamp(0.65rem, 0.7vw, 0.75rem);
+  --text-sm: clamp(0.8rem, 0.85vw, 0.875rem);
+  --text-base: clamp(0.9rem, 0.95vw, 1rem);
+  --text-lg: clamp(1.1rem, 1.5vw, 1.25rem);
+  --text-xl: clamp(1.5rem, 2vw, 1.8rem);
+  --text-2xl: clamp(2rem, 3vw, 2.8rem);
+  --text-3xl: clamp(2.5rem, 4vw, 3.5rem);
 }
+@keyframes cardEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes checkPop { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes livePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); } 50% { box-shadow: 0 0 0 4px rgba(74,222,128,0); } }
+[hidden] { display: none !important; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   background:
@@ -444,6 +457,25 @@ h1 span { color: var(--accent); }
 .sr-i b{display:block;font-size:.82rem;color:var(--text)}
 .sr-i small{display:block;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #search-spin{text-align:center;padding:10px;color:var(--muted);font-size:.8rem;display:none}
+@media(max-width:768px){#search-wrap{position:static;transform:none;width:100%;margin-bottom:16px}}
+
+/* --- Notification panel --- */
+#np{position:fixed;inset:0;z-index:200;pointer-events:none}
+#np .overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .2s}
+#np .sheet{position:absolute;top:0;right:0;bottom:0;width:min(380px,90vw);background:var(--card-bg);border-left:1px solid var(--border);padding:24px;overflow-y:auto;transform:translateX(100%);transition:transform .25s ease}
+#np.open{pointer-events:auto}
+#np.open .overlay{opacity:1}
+#np.open .sheet{transform:none}
+#np h3{margin-bottom:16px}
+#np .close{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+#np .fbtn{margin-bottom:16px;background:var(--border);color:var(--text);border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600}
+#np .grp{margin-bottom:16px}
+#np .grp h4{font-size:var(--text-sm);margin-bottom:8px}
+#np .ni{padding:8px 0;border-bottom:1px solid var(--border);font-size:var(--text-sm)}
+#np .ts{color:var(--muted);font-size:var(--text-xs)}
+#nb-badge{display:none;background:var(--red);color:#fff;border-radius:9px;font-size:.6rem;padding:1px 6px;margin-left:4px}
+#nb-badge.show{display:inline-block}
+body.panel-open{overflow:hidden}
 
 </style>
 </head>
@@ -460,8 +492,9 @@ h1 span { color: var(--accent); }
 <div class="nav">
   <button class="nav-tab active" onclick="switchPage('dashboard', event)">Dashboard</button>
   <button class="nav-tab" onclick="switchPage('services', event)">Services</button>
-  <button class="nav-tab" onclick="switchPage('docker', event)">Docker</button>
-  <button class="nav-tab" onclick="switchPage('shorts', event)">📺 Shorts</button>
+  <button class="nav-tab" data-feature="docker" onclick="switchPage('docker', event)">Docker</button>
+  <button class="nav-tab" data-feature="shorts" onclick="switchPage('shorts', event)">📺 Shorts</button>
+  <button class="nav-tab" data-feature="notifications" onclick="toggleNotifPanel()">🔔 Alerts<span id="nb-badge"></span></button>
 </div>
 
 <!-- Mobile bottom nav -->
@@ -469,8 +502,9 @@ h1 span { color: var(--accent); }
   <button class="mobile-tab active" onclick="switchPage('dashboard',event,this)"><span class="ti">🖥️</span>Dashboard</button>
   <button class="mobile-tab" onclick="switchPage('todos-page',event,this)"><span class="ti">✅</span>Todos</button>
   <button class="mobile-tab" onclick="switchPage('services',event,this)"><span class="ti">🔌</span>Services</button>
-  <button class="mobile-tab" onclick="switchPage('docker',event,this)"><span class="ti">🐳</span>Docker</button>
-  <button class="mobile-tab" onclick="document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));this.classList.add('active');toggleNotifPanel()"><span class="ti">🔔</span>Alerts</button>
+  <button class="mobile-tab" data-feature="docker" onclick="switchPage('docker',event,this)"><span class="ti">🐳</span>Docker</button>
+  <button class="mobile-tab" data-feature="shorts" onclick="switchPage('shorts',event,this)"><span class="ti">📺</span>Shorts</button>
+  <button class="mobile-tab" data-feature="notifications" onclick="toggleNotifPanel()"><span class="ti">🔔</span>Alerts</button>
 </div>
 
 <!-- Dashboard page -->
@@ -537,7 +571,7 @@ h1 span { color: var(--accent); }
 
   <!-- Weather -->
   <div class="card">
-    <h2>Weather · Vienna</h2>
+    <h2>Weather · <span id="w-city"></span></h2>
     <div class="weather-main">
       <div class="weather-temp" id="w-temp">--</div>
       <div>
@@ -548,7 +582,7 @@ h1 span { color: var(--accent); }
   </div>
 
   <!-- Minecraft -->
-  <div class="card">
+  <div class="card" data-feature="minecraft">
     <h2>Minecraft</h2>
     <div class="stat-grid">
       <div>
@@ -604,7 +638,7 @@ h1 span { color: var(--accent); }
 
 <!-- Services page -->
 <div class="page" id="page-services">
-  <div class="service-card no-link" id="mc-card">
+  <div class="service-card no-link" id="mc-card" data-feature="minecraft">
     <div class="service-icon">🎮</div>
     <div class="service-info">
       <div class="service-name">Minecraft</div>
@@ -615,30 +649,9 @@ h1 span { color: var(--accent); }
       <span style="margin-left:8px;font-size:var(--text-xs);color:var(--muted)" id="mc-players"></span>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
         <button class="btn btn-sm" id="mc-copy-btn" onclick="copyMcIp()">Copy IP</button>
-        <a href="#" id="mc-crafty-link" style="font-size:var(--text-xs);color:var(--accent);">Crafty →</a>
       </div>
     </div>
   </div>
-  <a class="service-card" href="http://100.114.5.66:8100" target="_blank">
-    <div class="service-icon">🛠️</div>
-    <div class="service-info">
-      <div class="service-name">Crafty Controller</div>
-      <div class="service-desc">Minecraft server management</div>
-      <span class="service-status up">
-        <span class="dot"></span>Online
-      </span>
-    </div>
-  </a>
-  <a class="service-card" href="http://100.114.5.66:8097/docs" target="_blank">
-    <div class="service-icon">🔌</div>
-    <div class="service-info">
-      <div class="service-name">Personal API</div>
-      <div class="service-desc">Auto-generated FastAPI docs</div>
-      <span class="service-status up" id="api-status">
-        <span class="dot"></span>Online
-      </span>
-    </div>
-  </a>
   <div class="services-grid" id="services-grid"></div>
 </div>
 
@@ -750,10 +763,21 @@ function updateStats(d) {
   document.getElementById('uptime').textContent = formatUptime(d.uptime_seconds);
 }
 
+// --- Config: hide widgets for integrations that are not configured ---
+let CONFIG = { city: '', minecraft: false, docker: false, shorts: false, notifications: false };
+const configReady = fetch('/api/config').then(r => r.json()).then(cfg => {
+  CONFIG = cfg;
+  document.querySelectorAll('[data-feature]').forEach(el => {
+    el.hidden = !CONFIG[el.dataset.feature];
+  });
+  document.getElementById('w-city').textContent = CONFIG.city;
+}).catch(e => console.error('config:', e));
+
 // --- Weather ---
 async function loadWeather() {
   try {
-    const r = await fetch('/api/weather?city=Vienna');
+    const r = await fetch('/api/weather');
+    if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     const cur = d.current_condition[0];
     document.getElementById('w-temp').textContent = cur.temp_C + '°C';
@@ -771,6 +795,8 @@ loadWeather();
 
 // --- Minecraft dashboard card ---
 async function loadMcDashboard() {
+  await configReady;
+  if (!CONFIG.minecraft) return;
   try {
     const r = await fetch('/api/minecraft');
     const d = await r.json();
@@ -837,24 +863,34 @@ function drawSparkline(svgId, downData, upData) {
 loadNetwork();
 setInterval(loadNetwork, 5000);
 
-// --- Todos ---
-async function loadTodos() {
-  const r = await fetch('/api/todos');
-  const items = await r.json();
-  const list = document.getElementById('todo-list');
-  if (!items.length) {
+// --- Todos (rendered into the dashboard card and the mobile Todos page) ---
+let todoCache = [];
+function renderTodoList(listId) {
+  const list = document.getElementById(listId);
+  if (!todoCache.length) {
     list.innerHTML = '<div class="empty-msg">No tasks yet</div>';
     return;
   }
-  list.innerHTML = items.map(t => `
-    <li class="todo-item${t.completed?' completed':''}">
-      <button class="todo-check" onclick="toggleTodo('${t.id}')">${t.completed?'✓':''}</button>
+  list.innerHTML = todoCache.map(t => {
+    const done = t.status === 'done';
+    return `
+    <li class="todo-item${done ? ' completed' : ''}">
+      <button class="todo-check" onclick="toggleTodo('${t.id}')" aria-label="Toggle done">${done ? '✓' : ''}</button>
       <span class="todo-text">${escapeHtml(t.text)}</span>
-      <button class="delete-btn" onclick="deleteTodo('${t.id}')">✕</button>
-    </li>`).join('');
+      <button class="delete-btn" onclick="deleteTodo('${t.id}')" aria-label="Delete">✕</button>
+    </li>`;
+  }).join('');
 }
-async function addTodo() {
-  const inp = document.getElementById('todo-input');
+async function loadTodos() {
+  try {
+    const r = await fetch('/api/todos');
+    todoCache = await r.json();
+  } catch (e) { console.error('todos:', e); }
+  renderTodoList('todo-list');
+  renderTodoList('todo-list-m');
+}
+async function createTodo(inputId) {
+  const inp = document.getElementById(inputId);
   const text = inp.value.trim();
   if (!text) return;
   await fetch('/api/todos', {
@@ -865,8 +901,16 @@ async function addTodo() {
   inp.value = '';
   loadTodos();
 }
+function addTodo() { createTodo('todo-input'); }
+function addTodoM() { createTodo('todo-input-m'); }
 async function toggleTodo(id) {
-  await fetch('/api/todos/' + id, {method:'PUT'});
+  const todo = todoCache.find(t => t.id === id);
+  const status = todo && todo.status === 'done' ? 'todo' : 'done';
+  await fetch('/api/todos/' + id, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({status})
+  });
   loadTodos();
 }
 async function deleteTodo(id) {
@@ -935,7 +979,7 @@ function switchPage(name, e, mb) {
   if (name === 'services') loadServices();
   if (name === 'docker') loadDocker();
   if (name === 'shorts') { loadShortsConfig(); loadShortsStats(); loadShortsQueue(); loadShortsLog(); }
-  if (name === 'todos-page') loadTodosM();
+  if (name === 'todos-page') loadTodos();
 }
 
 // --- Services ---
@@ -945,18 +989,17 @@ async function loadServices() {
     const r = await fetch('/api/services');
     const services = await r.json();
     const grid = document.getElementById('services-grid');
-    const hostname = window.location.hostname;
-    // Filter out minecraft and crafty — they have dedicated cards above
-    const filtered = services.filter(s => s.name !== 'minecraft' && s.name !== 'crafty');
-    grid.innerHTML = filtered.map(s => {
-      // Rewrite any remaining localhost URLs to the actual hostname
-      let url = s.url.replace('localhost', hostname);
+    if (!services.length) {
+      grid.innerHTML = '<div class="empty-msg" style="padding:20px">No services configured — add them to config.json</div>';
+      return;
+    }
+    grid.innerHTML = services.map(s => {
       return `
-      <a class="service-card" href="${url}" target="_blank">
-        <div class="service-icon">${s.icon}</div>
+      <a class="service-card" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">
+        <div class="service-icon">${escapeHtml(s.icon || '🔗')}</div>
         <div class="service-info">
-          <div class="service-name">${s.name}</div>
-          <div class="service-desc">${s.desc}</div>
+          <div class="service-name">${escapeHtml(s.name)}</div>
+          <div class="service-desc">${escapeHtml(s.desc || '')}</div>
           <span class="service-status ${s.up ? 'up' : 'down'}">
             <span class="dot"></span> ${s.up ? 'Online' : 'Offline'}
           </span>
@@ -969,17 +1012,15 @@ async function loadServices() {
 }
 
 // --- Minecraft card ---
-const MC_SERVER = 'homebase.local:25565';
 async function loadMcStatus() {
+  await configReady;
+  if (!CONFIG.minecraft) return;
   try {
     const r = await fetch('/api/minecraft');
     const d = await r.json();
     const statusEl = document.getElementById('mc-status');
     const descEl = document.getElementById('mc-desc');
     const playersEl = document.getElementById('mc-players');
-    const craftyLink = document.getElementById('mc-crafty-link');
-    const hostname = window.location.hostname;
-    craftyLink.href = `http://${hostname}:8444`;
     if (d.online) {
       statusEl.className = 'service-status up';
       statusEl.innerHTML = '<span class="dot"></span>Online';
@@ -996,7 +1037,7 @@ async function loadMcStatus() {
   }
 }
 function copyMcIp() {
-  navigator.clipboard.writeText(MC_SERVER).then(() => {
+  navigator.clipboard.writeText(CONFIG.minecraft_address).then(() => {
     const btn = document.getElementById('mc-copy-btn');
     const orig = btn.textContent;
     btn.textContent = 'Copied!';
@@ -1119,14 +1160,48 @@ async function loadShortsLog() {
   } catch(e) { console.error('shorts log:', e); }
 }
 // --- Notifications ---
-function toggleNotifPanel(){var p=document.getElementById('np');p.classList.toggle('open');if(p.classList.contains('open'))loadNotifs()}
-async function loadNotifs(){try{var r=await fetch('http://localhost:8102/notifications');var ns=await r.json();var urgent=ns.filter(function(n){return n.level==='urgent'});var normal=ns.filter(function(n){return n.level==='normal'});var badge=document.getElementById('nb-badge');var cnt=urgent.length+normal.length;if(cnt){badge.textContent=cnt;badge.classList.add('show')}else{badge.classList.remove('show')}var g=document.getElementById('np-groups');if(!ns.length){g.innerHTML='<div class="empty-msg">No pending notifications</div>';return}var fmt=function(t){return new Date(t).toLocaleString()};var h='';if(urgent.length)h+='<div class="grp"><h4 style="color:var(--red)">🔴 Urgent</h4>'+urgent.map(function(n){return'<div class="ni">['+escapeHtml(n.service)+'] '+escapeHtml(n.message)+'<br><span class="ts">'+fmt(n.timestamp)+'</span></div>'}).join('')+'</div>';if(normal.length)h+='<div class="grp"><h4 style="color:var(--yellow)">🟡 Normal</h4>'+normal.map(function(n){return'<div class="ni">['+escapeHtml(n.service)+'] '+escapeHtml(n.message)+'<br><span class="ts">'+fmt(n.timestamp)+'</span></div>'}).join('')+'</div>';g.innerHTML=h}catch(e){document.getElementById('np-groups').innerHTML='<div class="empty-msg">Notification service unreachable</div>'}}
-async function flushDigest(){try{var r=await fetch('http://localhost:8102/notifications/flush',{method:'POST'});var d=await r.json();loadNotifs()}catch(e){console.error('flush:',e)}}
-loadNotifs();setInterval(loadNotifs,60000);
-
-// -- Mobile todos --
-async function loadTodosM(){var r=await fetch('/api/todos');var items=await r.json();var list=document.getElementById('todo-list-m');if(!items.length){list.innerHTML='<div class="empty-msg">No tasks yet</div>';return;}list.innerHTML=items.map(t=>'<li class="todo-item'+(t.completed?' completed':'')+'"><button class="todo-check" onclick="toggleTodo(\''+t.id+'\');loadTodosM();loadTodos()">'+(t.completed?'✓':'')+'</button><span class="todo-text">'+escapeHtml(t.text)+'</span><button class="delete-btn" onclick="deleteTodo(\''+t.id+'\');loadTodosM();loadTodos()">✕</button></li>').join('')}
-async function addTodoM(){var inp=document.getElementById('todo-input-m');var text=inp.value.trim();if(!text)return;await fetch('/api/todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});inp.value='';loadTodosM();loadTodos()}
+function toggleNotifPanel() {
+  const p = document.getElementById('np');
+  p.classList.toggle('open');
+  document.body.classList.toggle('panel-open', p.classList.contains('open'));
+  if (p.classList.contains('open')) loadNotifs();
+}
+function renderNotifGroup(title, color, items) {
+  if (!items.length) return '';
+  const fmt = t => new Date(t).toLocaleString();
+  return `<div class="grp"><h4 style="color:${color}">${title}</h4>` +
+    items.map(n => `<div class="ni">[${escapeHtml(n.service)}] ${escapeHtml(n.message)}<br><span class="ts">${fmt(n.timestamp)}</span></div>`).join('') +
+    '</div>';
+}
+async function loadNotifs() {
+  await configReady;
+  if (!CONFIG.notifications) return;
+  const g = document.getElementById('np-groups');
+  const badge = document.getElementById('nb-badge');
+  try {
+    const r = await fetch('/api/notifications');
+    if (!r.ok) throw new Error(r.status);
+    const ns = await r.json();
+    const urgent = ns.filter(n => n.level === 'urgent');
+    const normal = ns.filter(n => n.level === 'normal');
+    const cnt = urgent.length + normal.length;
+    badge.textContent = cnt;
+    badge.classList.toggle('show', cnt > 0);
+    g.innerHTML = ns.length
+      ? renderNotifGroup('🔴 Urgent', 'var(--red)', urgent) + renderNotifGroup('🟡 Normal', 'var(--yellow)', normal)
+      : '<div class="empty-msg">No pending notifications</div>';
+  } catch (e) {
+    g.innerHTML = '<div class="empty-msg">Notification service unreachable</div>';
+  }
+}
+async function flushDigest() {
+  try {
+    await fetch('/api/notifications/flush', {method: 'POST'});
+    loadNotifs();
+  } catch (e) { console.error('flush:', e); }
+}
+loadNotifs();
+setInterval(loadNotifs, 60000);
 
 // --- Touch: swipe tabs + pull-to-refresh + scroll lock ---
 (function(){
@@ -1175,10 +1250,7 @@ async function addTodoM(){var inp=document.getElementById('todo-input-m');var te
 
     // Pull-to-refresh trigger at 80px
     if (isPulling && pullY >= 80) {
-      // Re-fetch all dashboard stats
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({action:'refresh'}));
-      }
+      // Re-fetch all dashboard widgets (system stats arrive via WebSocket)
       loadWeather();
       loadMcDashboard();
       loadNetwork();
@@ -1188,15 +1260,6 @@ async function addTodoM(){var inp=document.getElementById('todo-input-m');var te
     ptrEl.classList.remove('visible');
     isPulling = false; pullY = 0;
   });
-})();
-
-// --- Body scroll lock when notification panel open ---
-(function(){
-  var origToggle = toggleNotifPanel;
-  toggleNotifPanel = function(){
-    origToggle();
-    document.body.classList.toggle('panel-open', document.getElementById('np').classList.contains('open'));
-  };
 })();
 </script>
 <script>
@@ -1226,23 +1289,22 @@ async function doSearch(q){
     var r=await fetch('/api/search?q='+encodeURIComponent(q));
     var d=await r.json();
     sp.style.display='none';
-    var ic={mindbase:'🧠',wiki:'📚',reminder:'⏰',github:'📦',session:'🤖'},g={};
+    var ic={mindbase:'🧠',wiki:'📚',reminders:'⏰',shopping:'🛒',git:'🔀',github:'📦',session:'🤖'},g={};
     (d.results||[]).forEach(function(i){(g[i.source]||(g[i.source]=[])).push(i)});
     if(!Object.keys(g).length){sr.innerHTML='<div style="padding:12px;color:var(--muted);font-size:.8rem">No results</div>';return}
     var h='';
     for(var s in g){
       h+='<div class="sr-grp"><div class="sr-h">'+(ic[s]||'🔎')+' '+s+'</div>'+g[s].map(function(i){
-        return'<div class="sr-i" data-s="'+s+'" data-t="'+escapeHtml(i.title)+'" data-u="'+escapeHtml(i.url||i.id||i.title||'')+'" data-sn="'+escapeHtml(i.snippet||'')+'"><b>'+escapeHtml(i.title)+'</b><small>'+escapeHtml(i.snippet||'')+'</small></div>'
+        return'<div class="sr-i" data-t="'+escapeHtml(i.title)+'" data-u="'+escapeHtml(i.url||'')+'" data-sn="'+escapeHtml(i.snippet||'')+'"><b>'+escapeHtml(i.title)+'</b><small>'+escapeHtml(i.snippet||'')+'</small></div>'
       }).join('')+'</div>'
     }
     sr.innerHTML=h;
     sr.querySelectorAll('.sr-i').forEach(function(el){
       el.onclick=function(){
-        var s=this.dataset.s,t=this.dataset.t,u=this.dataset.u,sn=this.dataset.sn;
-        if(s==='mindbase')window.open('http://localhost:8200/?id='+encodeURIComponent(u),'_blank');
-        else if(s==='wiki')window.open('http://localhost:8300/'+encodeURIComponent(t),'_blank');
-        else if(s==='reminder')navigator.clipboard.writeText(t+(sn?' — '+sn:''));
-        else if(s==='github' && u)window.open(u,'_blank');
+        // Open results that link somewhere, copy the rest to the clipboard
+        var t=this.dataset.t,u=this.dataset.u,sn=this.dataset.sn;
+        if(u)window.open(u,'_blank','noopener');
+        else navigator.clipboard.writeText(t+(sn?' — '+sn:'')).catch(function(){});
       }
     })
   }catch(e){
@@ -1254,10 +1316,12 @@ async function doSearch(q){
 
 <!-- Notification slide-in panel -->
 <div id="np"><div class="overlay" onclick="toggleNotifPanel()"></div>
-  <button class="close" onclick="toggleNotifPanel()">✕</button>
-  <h3>🔔 Notifications</h3>
-  <button class="fbtn" id="np-flush" onclick="flushDigest()">Send digest now</button>
-  <div id="np-groups"></div>
+  <div class="sheet">
+    <button class="close" onclick="toggleNotifPanel()" aria-label="Close">✕</button>
+    <h3>🔔 Notifications</h3>
+    <button class="fbtn" id="np-flush" onclick="flushDigest()">Send digest now</button>
+    <div id="np-groups"></div>
+  </div>
 </div>
 
 </body>

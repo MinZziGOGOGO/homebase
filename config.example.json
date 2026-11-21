@@ -1,0 +1,22 @@
+{
+  "city": "Vienna",
+  "services": [
+    { "name": "Nextcloud", "url": "http://localhost:8888", "icon": "☁️", "desc": "Self-hosted cloud storage" },
+    { "name": "Pi-hole", "url": "http://localhost:8085/admin", "icon": "🛡️", "desc": "Network ad blocker" },
+    { "name": "Portainer", "url": "http://localhost:9000", "icon": "🐳", "desc": "Docker container manager" }
+  ],
+  "minecraft_server": "localhost:25565",
+  "minecraft_public_address": "homebase.local:25565",
+  "docker": true,
+  "shortform_dir": null,
+  "notifications_url": null,
+  "search": {
+    "mindbase_url": null,
+    "wiki_url": null,
+    "projects_dir": "~/projects",
+    "shopping_list": null,
+    "reminders_dir": null,
+    "sessions_dir": null,
+    "github_user": "MinZziGOGOGO"
+  }
+}

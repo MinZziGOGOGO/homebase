@@ -1,92 +1,115 @@
-# Homebase Dashboard
+# Homebase
 
-A self-hosted personal dashboard showing live system stats, weather, todos, and notes.
+A self-hosted dashboard for my home server. It shows live system stats, weather, todos and notes,
+and gives me one place to check on the services and Docker containers running on the machine.
+
+![Homebase dashboard](docs/screenshot.png)
 
 ## Features
 
-- **Live System Stats** — CPU, RAM, disk usage with auto-refresh every 5 seconds via WebSocket
-- **Server Uptime** — Shows how long the machine has been running
-- **Todo List** — Add, complete, and delete tasks, persisted to JSON
-- **Markdown Notes** — Write and save notes, persisted to JSON
-- **Weather Widget** — Current conditions for Vienna (configurable) via wttr.in
-- **Dark Mode UI** — Clean, modern dark theme
+- **Live system stats** – CPU, RAM, disk and uptime, pushed to the browser every 5 seconds over a WebSocket
+- **Network speed** – current download/upload rate with a small sparkline
+- **Weather** – current conditions for a configurable city via [wttr.in](https://wttr.in) (no API key needed)
+- **Todos and notes** – simple CRUD, persisted to JSON files
+- **Services overview** – health-checks every configured service and links to it, using the hostname you opened the dashboard with
+- **Docker manager** – list containers and start / stop / restart them
+- **Unified search** – one search box across git history, GitHub repos and other optional sources
+- **Installable PWA** with a mobile layout (bottom navigation, swipe between tabs, pull-to-refresh)
+- **Optional integrations** – Minecraft server status, a notification service and the dashboard for my short-form video tool. They stay hidden until you configure them.
 
-## Tech Stack
+## Tech stack
 
-- **Backend**: FastAPI with WebSockets
-- **Frontend**: Vanilla HTML/CSS/JS (no build step, no npm)
-- **System metrics**: psutil
-- **Storage**: JSON files
-- **Weather**: wttr.in (free, no API key needed)
+| Part | Technology |
+|------|------------|
+| Backend | Python, FastAPI, WebSockets, httpx, psutil |
+| Frontend | Vanilla HTML / CSS / JavaScript, no build step |
+| Storage | JSON files |
+| Tests | pytest, pytest-asyncio |
 
-## Setup
+## Getting started
 
-### Requirements
-
-- Python 3.10+
-- pip
-
-### Install
+Requires Python 3.10+.
 
 ```bash
-cd ~/projects/homebase
+git clone https://github.com/MinZziGOGOGO/homebase.git
+cd homebase
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+uvicorn homebase.main:app --host 0.0.0.0 --port 8080
 ```
 
-### Run
+Then open `http://<server-ip>:8080`.
+
+## Configuration
+
+The dashboard works without any configuration. To change the city or add services and integrations,
+copy the example config and edit it:
 
 ```bash
-cd ~/projects/homebase
-python -m uvicorn homebase.main:app --host 0.0.0.0 --port 8080
+cp config.example.json config.json
 ```
 
-Then open `http://<server-ip>:8080` in your browser.
+| Key | Description |
+|-----|-------------|
+| `city` | Location for the weather widget |
+| `services` | Cards on the Services tab (`name`, `url`, `icon`, `desc`) |
+| `minecraft_server` | Address of a Minecraft server to show (`null` hides the card) |
+| `docker` | Show the Docker tab (needs the `docker` CLI) |
+| `shortform_dir` | Path to a shortform-ai checkout (`null` hides the Shorts tab) |
+| `notifications_url` | Base URL of a notification service (`null` hides Alerts) |
+| `search.*` | Optional search sources, e.g. `projects_dir` or `github_user` |
 
-### Run Tests
+Environment variables: `HOMEBASE_CONFIG` (path to the config file) and `HOMEBASE_DATA_DIR`
+(where todos and notes are stored, default `./data`).
+
+> **Note:** Homebase has no login. It is meant for a home network or a VPN such as Tailscale.
+> Don't expose it to the internet, since the Docker tab can start and stop containers.
+
+## Running the tests
 
 ```bash
-cd ~/projects/homebase
-pytest tests/ -v
+pip install -r requirements-dev.txt
+pytest
 ```
 
-## Project Structure
+The tests use a temporary data directory, so they never touch your real todos and notes.
+
+## Project structure
 
 ```
 homebase/
-  homebase/
-    __init__.py
-    main.py          # FastAPI app, routes, WebSocket
-    stats.py         # System metrics via psutil
-    storage.py       # JSON CRUD for todos and notes
-    static/
-      index.html     # Single-page dashboard frontend
-  tests/
-    __init__.py
-    test_stats.py    # Tests for system metrics
-    test_storage.py  # Tests for JSON persistence
-    test_app.py      # Tests for API endpoints
-  data/              # Runtime JSON storage (auto-created)
-    todos.json
-    notes.json
-  requirements.txt
-  README.md
+├── homebase/
+│   ├── main.py        # FastAPI app: REST API, WebSocket, integrations
+│   ├── config.py      # Loads config.json over the defaults
+│   ├── stats.py       # System metrics via psutil
+│   ├── storage.py     # JSON persistence for todos and notes
+│   └── static/        # Single-page frontend, PWA manifest, service worker
+├── tests/
+├── config.example.json
+└── requirements.txt
 ```
 
-## API Endpoints
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | Dashboard frontend |
-| GET | `/api/todos` | List all todos |
-| POST | `/api/todos` | Create a todo |
-| PUT | `/api/todos/{id}` | Toggle todo completion |
+| GET | `/api/config` | Enabled features for the frontend |
+| GET / POST | `/api/todos` | List / create todos |
+| PATCH | `/api/todos/{id}` | Set status (`todo`, `in_progress`, `done`) |
 | DELETE | `/api/todos/{id}` | Delete a todo |
-| GET | `/api/notes` | List all notes |
-| POST | `/api/notes` | Create a note |
+| GET / POST | `/api/notes` | List / create notes |
 | DELETE | `/api/notes/{id}` | Delete a note |
-| GET | `/api/weather?city=Vienna` | Weather data from wttr.in |
-| WS | `/ws/stats` | WebSocket: live system stats |
+| GET | `/api/weather` | Weather for the configured city |
+| GET | `/api/network` | Current network throughput |
+| GET | `/api/services` | Configured services with up/down status |
+| GET | `/api/docker/containers` | Docker containers |
+| POST | `/api/docker/containers/{name}/{start\|stop\|restart}` | Control a container |
+| GET | `/api/search?q=` | Unified search |
+| WS | `/ws/stats` | Live system stats |
+
+Interactive API docs are available at `/docs` while the server is running.
 
 ## License
 
-MIT
+[MIT](LICENSE)

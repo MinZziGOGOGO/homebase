@@ -4,10 +4,10 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(os.environ.get("HOMEBASE_DATA_DIR", Path(__file__).resolve().parent.parent / "data"))
 
 TodoStatus = Literal["todo", "in_progress", "done"]
 VALID_STATUSES: tuple[TodoStatus, ...] = ("todo", "in_progress", "done")
